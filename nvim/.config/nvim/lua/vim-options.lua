@@ -39,7 +39,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- Notes command - opens nvim in notes directory in temporary tmux window
 vim.api.nvim_create_user_command('Notes', function()
-  local notes_dir = vim.fn.expand('~/Documents/notes')
+  local notes_dir = vim.fn.expand('~/notes')
   
   -- Check if we're in tmux
   if vim.env.TMUX then
