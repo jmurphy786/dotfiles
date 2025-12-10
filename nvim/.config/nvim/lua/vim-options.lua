@@ -14,6 +14,9 @@ vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
 vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
 vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
 
+-- bind to close a window
+vim.keymap.set("n", "<leader>k", "<cmd>close<CR>", { desc = "Close current window" })
+
 vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers sort_mru=true<cr>", { desc = "Find buffers (MRU)" })
 vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Find files" })
 vim.keymap.set("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
