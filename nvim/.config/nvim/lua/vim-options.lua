@@ -8,11 +8,38 @@ vim.opt.number = true
 vim.opt.swapfile = false
 vim.opt.clipboard = "unnamedplus"
 
+-- Remove sign column background
+vim.cmd([[highlight clear SignColumn]])
+
+-- Remove line number background
+vim.cmd([[highlight clear LineNr]])
+vim.cmd([[highlight clear CursorLineNr]])
+
+vim.api.nvim_set_hl(0, 'Normal', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'LineNr', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'SignColumn', { bg = 'NONE' })
+vim.api.nvim_set_hl(0, 'CursorLineNr', { bg = 'NONE' })
+
 vim.keymap.set("n", "<leader>ml", "<cmd>vsplit<cr>")
 vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
 vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
 vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
 vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
+
+-- reload all buffers
+vim.opt.autoread = true
+vim.opt.autowriteall = false  -- Don't auto-save
+
+-- Force check on focus
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
+  command = "silent! checktime",
+})
+
+vim.keymap.set("n", "<leader>r", function()
+  vim.cmd("bufdo! edit!")
+  print("All buffers force reloaded")
+end, { desc = "Force reload all buffers" })
 
 -- bind to close a window
 vim.keymap.set("n", "<leader>k", "<cmd>close<CR>", { desc = "Close current window" })

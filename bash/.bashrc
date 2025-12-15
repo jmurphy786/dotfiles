@@ -108,8 +108,17 @@ PROMPT_COMMAND=""
 
 # Add to your shell config (~/.bashrc, ~/.zshrc, etc.)
 export PATH="$HOME/.tmuxifier/bin:$PATH"
-eval "$(tmuxifier init -)"
+export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
 
+# Add Jdk to export path for android 
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+export PATH=$PATH:$JAVA_HOME/bin
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH="$HOME/bin:$PATH"
+eval "$(tmuxifier init -)"
+alias livelogs='tail -f ~/tmp/microservices-logs/services.log | fzf --tail 10000'
 # Bind Ctrl+G to the function
 bind -x '"\C-g": __fzf_file_widget'
 echo ""

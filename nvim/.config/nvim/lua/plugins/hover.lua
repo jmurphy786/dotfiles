@@ -17,6 +17,6 @@ return {
 
 		-- Custom styling
 
-		vim.keymap.set("n", "K", require("hover").hover, { desc = "hover.nvim" })
+		vim.keymap.set("n", ".", require("hover").hover, { desc = "hover.nvim" })
 	end,
 }
