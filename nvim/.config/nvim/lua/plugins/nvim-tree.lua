@@ -38,7 +38,8 @@ return {
       },
       
       update_focused_file = {
-        enable = false,  -- Don't auto-reveal files
+        enable = true,  -- Don't auto-reveal files
+        update_root = false,
       },
       
       git = {
@@ -47,7 +48,7 @@ return {
       },
       
       filesystem_watchers = {
-        enable = false,  -- Critical: disable file watching in monorepos
+        enable = true,  -- Critical: disable file watching in monorepos
       },
       
       filters = {

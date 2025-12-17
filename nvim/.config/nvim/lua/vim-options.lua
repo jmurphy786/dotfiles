@@ -15,6 +15,65 @@ vim.cmd([[highlight clear SignColumn]])
 vim.cmd([[highlight clear LineNr]])
 vim.cmd([[highlight clear CursorLineNr]])
 
+-- Navigate down: Browse and select subdirectory
+vim.keymap.set('n', '<leader>cd', function()
+  local cwd = vim.fn.getcwd()
+  local dirs = vim.fn.systemlist('find "' .. cwd .. '" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null')
+  
+  if #dirs == 0 then
+    print('No subdirectories found in: ' .. vim.fn.fnamemodify(cwd, ':~'))
+    return
+  end
+  
+  vim.ui.select(dirs, {
+    prompt = 'Select directory (current: ' .. vim.fn.fnamemodify(cwd, ':~') .. ')',
+    format_item = function(item)
+      return vim.fn.fnamemodify(item, ':t')
+    end,
+  }, function(choice)
+    if choice then
+      vim.cmd('lcd ' .. vim.fn.fnameescape(choice))
+      
+      -- Update nvim-tree
+      local api = require('nvim-tree.api')
+      api.tree.change_root(choice)
+      
+      print('📁 ' .. vim.fn.fnamemodify(choice, ':~'))
+    end
+  end)
+end, { desc = "Change directory (down)" })
+
+-- Navigate up: Go to parent directory
+vim.keymap.set('n', '<leader>cu', function()
+  local parent = vim.fn.fnamemodify(vim.fn.getcwd(), ':h')
+  vim.cmd('lcd ..')
+  
+  -- Update nvim-tree
+  local api = require('nvim-tree.api')
+  api.tree.change_root(parent)
+  
+  print('📁 ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':~'))
+end, { desc = "Change directory (up)" })
+
+-- Show current directory
+vim.keymap.set('n', '<leader>cw', function()
+  print('📁 ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':~'))
+end, { desc = "Show current directory" })
+
+-- Reset to where nvim was opened
+vim.keymap.set('n', '<leader>cr', function()
+  local start_dir = vim.fn.getenv('PWD')
+  if start_dir and start_dir ~= vim.NIL then
+    vim.cmd('lcd ' .. vim.fn.fnameescape(start_dir))
+    
+    -- Update nvim-tree
+    local api = require('nvim-tree.api')
+    api.tree.change_root(start_dir)
+    
+    print('📁 Reset to: ' .. vim.fn.fnamemodify(start_dir, ':~'))
+  end
+end, { desc = "Reset to initial directory" })
+
 vim.api.nvim_set_hl(0, 'Normal', { bg = 'NONE' })
 vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'NONE' })
 vim.api.nvim_set_hl(0, 'LineNr', { bg = 'NONE' })
@@ -26,6 +85,49 @@ vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
 vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
 vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
 vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
+
+-- Jump to next/previous diagnostic
+vim.keymap.set("n", "]d", function()
+  require("trouble").next({skip_groups = true, jump = true})
+end, { desc = "Next diagnostic" })
+
+vim.keymap.set("n", "[d", function()
+  require("trouble").prev({skip_groups = true, jump = true})
+end, { desc = "Previous diagnostic" })
+
+-- Set up diagnostic signs and highlights
+vim.diagnostic.config({
+  signs = true,
+  underline = true,
+  virtual_text = true,
+  update_in_insert = false,
+})
+
+-- Highlight the entire line with errors
+vim.cmd([[
+  highlight DiagnosticLineError guibg=#3f1f1f gui=NONE
+  highlight DiagnosticLineWarn guibg=#3f3f1f gui=NONE
+]])
+
+-- Auto command to set line highlights
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  callback = function()
+    vim.diagnostic.show()
+  end,
+})
+
+vim.g.clipboard = {
+  name = 'win32yank',
+  copy = {
+    ['+'] = 'win32yank.exe -i --crlf',
+    ['*'] = 'win32yank.exe -i --crlf',
+  },
+  paste = {
+    ['+'] = 'win32yank.exe -o --lf',
+    ['*'] = 'win32yank.exe -o --lf',
+  },
+  cache_enabled = 0,
+}
 
 -- reload all buffers
 vim.opt.autoread = true
