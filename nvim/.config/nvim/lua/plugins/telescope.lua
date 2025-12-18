@@ -4,6 +4,7 @@ return {
   dependencies = {
     'nvim-lua/plenary.nvim',
     'debugloop/telescope-undo.nvim',
+    'nvim-telescope/telescope-ui-select.nvim',  -- Add this line
   },
   config = function()
     -- Enable persistent undo
@@ -55,11 +56,18 @@ return {
             },
           },
         },
+      -- Add this section
+        ["ui-select"] = {
+          require("telescope.themes").get_dropdown {
+            -- You can customize more here if needed
+          }
+        },
       },
     })
 
     -- Load extensions
     require('telescope').load_extension('undo')
+    require('telescope').load_extension('ui-select')  -- Add this line
 
     -- Keybindings
     vim.keymap.set('n', '<leader>p', builtin.find_files, { desc = "Find files" })
