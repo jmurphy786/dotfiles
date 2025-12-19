@@ -57,3 +57,7 @@ sudo pacman -S --needed - < ~/dotfiles/packages.txt
 # Test!
 tmux  # test tmux config
 nvim  # test nvim config
+
+```bash
+
+```

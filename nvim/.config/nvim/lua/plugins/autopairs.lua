@@ -2,8 +2,10 @@ return {
 	"windwp/nvim-autopairs",
 	event = "InsertEnter",
 	config = function()
-		require("nvim-autopairs").setup({})
-
+		require("nvim-autopairs").setup({
+			disable_filetype = { "TelescopePrompt" },
+			check_ts = true,
+		})
 		-- Integration with cmp
 		local cmp_autopairs = require("nvim-autopairs.completion.cmp")
 		local cmp = require("cmp")

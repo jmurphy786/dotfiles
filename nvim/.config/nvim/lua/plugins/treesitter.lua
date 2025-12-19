@@ -1,5 +1,6 @@
 return {
   "nvim-treesitter/nvim-treesitter",
+  dependencies = { "tadmccorkle/markdown.nvim" },
   build = ":TSUpdate",
   config = function()
     local config = require("nvim-treesitter.configs")

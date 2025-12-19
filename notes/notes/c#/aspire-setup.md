@@ -18,6 +18,8 @@ dotnet new aspire-apphost -n MyApp.AppHost
 
 ### Add these to the cs proj, is going to be whatever your relative route is 
 
+
+```cs
 var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
 {
     EnableResourceLogging = true,
@@ -31,5 +33,7 @@ builder.AddProject<Projects.PractitionerService>("practitioner");
 builder.AddProject<Projects.ReportService>("report");
 
 builder.Build().Run();
+
+```
 
 ### This would use the project reference and then instantiate them

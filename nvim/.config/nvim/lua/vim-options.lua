@@ -42,8 +42,7 @@ vim.keymap.set('n', '<leader>cd', function()
     end
   end)
 end, { desc = "Change directory (down)" })
-
--- Navigate up: Go to parent directory
+-- Navigate up: Go to parent directorny
 vim.keymap.set('n', '<leader>cu', function()
   local parent = vim.fn.fnamemodify(vim.fn.getcwd(), ':h')
   vim.cmd('lcd ..')
@@ -186,3 +185,16 @@ vim.api.nvim_create_user_command('Notes', function()
     vim.cmd('edit index.md')
   end
 end, {})
+
+-- This is for adding in folds 
+vim.opt.foldmethod = 'expr'
+vim.opt.foldexpr = 'nvim_treesitter#foldexpr()'
+vim.opt.foldlevel = 99
+
+vim.keymap.set('n', '<leader>ft', 'za', { desc = 'Fold toggle' })
+vim.keymap.set('n', '<leader>fT', 'zA', { desc = 'Fold toggle parent' })
+vim.keymap.set('n', '<leader>fc', 'zM', { desc = 'Fold close all' })
+vim.keymap.set('n', '<leader>fo', 'zR', { desc = 'Fold open all' })
+
+-- See all keybinds
+vim.keymap.set('n', '<leader>sk', '<cmd>Telescope keymaps<CR>', { desc = 'Search keymaps' })

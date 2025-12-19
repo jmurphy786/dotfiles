@@ -19,3 +19,4 @@ vim.env.PATH = vim.fn.stdpath("data") .. "/mason/bin:" .. vim.env.PATH
 
 require("vim-options")
 require("lazy").setup("plugins")
+require('luasnip.loaders.from_lua').load({paths = "~/.config/nvim/luasnippets/"})

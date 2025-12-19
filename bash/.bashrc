@@ -45,6 +45,7 @@ PROMPT_COMMAND=""
 export PATH="$HOME/.tmuxifier/bin:$PATH"
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
 export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+export PATH="/mnt/c/Program Files/WezTerm:$PATH"  # ✅
 source "$HOME/.bash_module_loader"
 eval "$(tmuxifier init -)"
 
@@ -57,3 +58,4 @@ echo ""
 fastfetch
 echo ""
 
+alias bat='batcat'

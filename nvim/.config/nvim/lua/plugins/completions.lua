@@ -3,6 +3,9 @@ return {
 		"hrsh7th/cmp-nvim-lsp",
 	},
 	{
+		"hrsh7th/cmp-buffer",  -- ADD THIS
+	},
+	{
 		"L3MON4D3/LuaSnip",
 		dependencies = {
 			"saadparwaiz1/cmp_luasnip",
@@ -32,8 +35,8 @@ return {
 					["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
 				}),
 				sources = cmp.config.sources({
-					{ name = "luasnip" }, -- For luasnip users.
 					{ name = "nvim_lsp" }, -- For luasnip users.
+					{ name = "luasnip" }, -- For luasnip users.
 				}, {
 					{ name = "buffer" },
 				}),

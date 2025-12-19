@@ -1,9 +1,9 @@
-# testme
-- [test.md]
+# Daily Tasks 
 
-# New notes
-- [newnotes/new.md]
-- [newnotes/test.md]
+### Tasks
 
-# c# notes
-- [c#/test.md]
+- [X] test
+- [ ] me
+- [ ] 123dadjk
+
+
