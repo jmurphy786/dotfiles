@@ -22,7 +22,6 @@ source_module() {
     
     if [[ -f "$module_file" ]]; then
         source "$module_file"
-        echo "✓ Loaded: $module" >&2
     else
         echo "✗ Module not found: $module_file" >&2
     fi
