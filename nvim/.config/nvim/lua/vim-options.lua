@@ -15,6 +15,9 @@ vim.cmd([[highlight clear SignColumn]])
 vim.cmd([[highlight clear LineNr]])
 vim.cmd([[highlight clear CursorLineNr]])
 
+vim.keymap.set('n', '<leader>jf', ':%!prettier --parser babel --stdin-filepath file.js 2>/dev/null || cat<CR>', 
+  { desc = 'Format as JavaScript' })
+
 -- Navigate down: Browse and select subdirectory
 vim.keymap.set('n', '<leader>cd', function()
   local cwd = vim.fn.getcwd()
@@ -195,6 +198,7 @@ vim.keymap.set('n', '<leader>ft', 'za', { desc = 'Fold toggle' })
 vim.keymap.set('n', '<leader>fT', 'zA', { desc = 'Fold toggle parent' })
 vim.keymap.set('n', '<leader>fc', 'zM', { desc = 'Fold close all' })
 vim.keymap.set('n', '<leader>fo', 'zR', { desc = 'Fold open all' })
+
 
 -- See all keybinds
 vim.keymap.set('n', '<leader>sk', '<cmd>Telescope keymaps<CR>', { desc = 'Search keymaps' })
