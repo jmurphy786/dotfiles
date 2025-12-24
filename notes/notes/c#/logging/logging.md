@@ -2,6 +2,7 @@
 
 I've recently been looking into how to setup good logs in c sharp, typically you can use serilog, or if they dont have that this custom Logger seems to do the job
 
+
 ```cs
 
 using Microsoft.Extensions.Logging;

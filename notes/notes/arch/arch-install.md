@@ -54,10 +54,7 @@ stow nvim
 # Install your saved packages
 sudo pacman -S --needed - < ~/dotfiles/packages.txt
 
-# Test!
+# Test everything works!
 tmux  # test tmux config
 nvim  # test nvim config
 
-```bash
-
-```

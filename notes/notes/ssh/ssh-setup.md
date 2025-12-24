@@ -1,6 +1,4 @@
-# Test 
-
-test me 
+#  If you want to setup ssh to connect to your github account  
 
 ## SSH setup
 
@@ -17,4 +15,7 @@ cat ~/.ssh/id_ed25519.pub
 ```
 
 
+## Setting up dual sign in for personal / other ssh
+
+***tbd***
 
