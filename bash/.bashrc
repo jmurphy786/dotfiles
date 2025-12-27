@@ -96,8 +96,10 @@ EOF
   cd "$DAILY_DIR" && nvim "$DAILY_FILE"
 }
 
+alias pdfopen='pdf=$(find ~/Documents/books -type f -name "*.pdf" | fzf) && cmd.exe /c start "" "$(wslpath -w "$pdf")"'
+eval "$(zoxide init --cmd cd bash)"
 
-
+export CLAUDE_CONVOS_DIR="$HOME/claude-convos"
 # ============================================================================
 # STARTUP
 # ============================================================================

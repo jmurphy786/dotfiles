@@ -15,6 +15,53 @@ vim.cmd([[highlight clear SignColumn]])
 vim.cmd([[highlight clear LineNr]])
 vim.cmd([[highlight clear CursorLineNr]])
 
+vim.keymap.set('n', '<leader>ma', function()
+  local current_file = vim.fn.expand('%:p')
+  
+  if current_file == '' or not current_file:match('%.md$') then
+    print('Not a markdown file')
+    return
+  end
+  
+  vim.cmd('write')
+  
+  -- Split to the RIGHT with -h (horizontal split)
+  local cmd = string.format('tmux split-window -h -l 80%% "claude-append \'%s\'; tmux kill-pane"', current_file)
+  vim.fn.system(cmd)
+  
+  vim.defer_fn(function()
+    vim.cmd('edit!')
+    vim.cmd('normal! G')
+  end, 500)
+end)
+
+vim.keymap.set('n', '<leader>mn', function()
+  vim.fn.system('tmux split-window -h -l 80% "claude-new; tmux kill-pane"')
+  
+  vim.defer_fn(function()
+    local newest = vim.fn.system('ls -t ~/claude-convos/*.md 2>/dev/null | head -1'):gsub('%s+', '')
+    if newest ~= '' then
+      vim.cmd('edit ' .. newest)
+    end
+  end, 500)
+end)
+
+-- Custom command to browse claude conversations sorted by newest
+vim.keymap.set('n', '<leader>mc', function()
+  -- Get files sorted by newest
+  local files = vim.fn.systemlist('ls -t ~/claude-convos/*.md 2>/dev/null')
+  
+  -- Create a quickfix list with them
+  local qf_list = {}
+  for _, file in ipairs(files) do
+    table.insert(qf_list, {filename = file, lnum = 1})
+  end
+  
+  vim.fn.setqflist(qf_list)
+  vim.cmd('copen')
+end, { desc = 'Browse Claude conversations (newest first)' })
+
+ 
 vim.keymap.set('n', '<leader>jf', ':%!prettier --parser babel --stdin-filepath file.js 2>/dev/null || cat<CR>', 
   { desc = 'Format as JavaScript' })
 

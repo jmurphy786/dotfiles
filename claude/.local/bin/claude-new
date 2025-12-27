@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -e
+
+CONVOS_DIR="${CLAUDE_CONVOS_DIR:-$HOME/claude-convos}"
+mkdir -p "$CONVOS_DIR"
+
+# Compose message
+TEMP_MSG=$(mktemp --suffix=.md)
+cat > "$TEMP_MSG" << 'EOF'
+# Your Question
+
+EOF
+
+nvim "$TEMP_MSG"
+
+if [ ! -s "$TEMP_MSG" ]; then
+    rm "$TEMP_MSG"
+    exit 0
+fi
+
+MESSAGE=$(tail -n +3 "$TEMP_MSG")
+rm "$TEMP_MSG"
+
+if [ -z "$MESSAGE" ]; then
+    echo "No message entered"
+    exit 0
+fi
+
+# Ask Claude
+echo ""
+echo "Asking Claude..."
+RESPONSE=$(claude "$MESSAGE" 2>&1)
+
+# Create new file
+TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
+TITLE=$(echo "$MESSAGE" | head -1 | cut -c 1-30 | tr ' ' '-' | tr -cd '[:alnum:]-')
+NEW_FILE="$CONVOS_DIR/${TIMESTAMP}-${TITLE}.md"
+
+cat > "$NEW_FILE" << EOF
+# Claude Conversation
+*Started: $(date '+%Y-%m-%d %H:%M:%S')*
+
+---
+
+# 1
+
+**Question:**
+$MESSAGE
+
+**Answer:**
+$RESPONSE
+
+---
+
+EOF
+
+echo ""
+echo "✓ Created: $NEW_FILE"
+echo ""
+read -p "Press Enter to open..."
+
+# Output the filename for tmux to capture
+echo "$NEW_FILE"
