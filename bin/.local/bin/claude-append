@@ -1,1 +1,61 @@
-../../dotfiles/claude/.local/bin/claude-append
+#!/usr/bin/env bash
+set -e
+
+CURRENT_FILE="$1"
+
+if [ -z "$CURRENT_FILE" ] || [ ! -f "$CURRENT_FILE" ]; then
+    echo "Error: No file provided or file doesn't exist"
+    read -p "Press Enter..."
+    exit 1
+fi
+
+if [[ ! "$CURRENT_FILE" =~ \.md$ ]]; then
+    echo "Error: Not a markdown file"
+    read -p "Press Enter..."
+    exit 1
+fi
+
+# Compose message
+TEMP_MSG=$(mktemp --suffix=.md)
+echo "# Your Question" > "$TEMP_MSG"
+echo "" >> "$TEMP_MSG"
+
+nvim "$TEMP_MSG"
+
+MESSAGE=$(sed '1,2d' "$TEMP_MSG")
+rm "$TEMP_MSG"
+
+if [ -z "$MESSAGE" ]; then
+    echo "No message entered"
+    exit 0
+fi
+
+# Get next question number
+NUM=$(grep -oP '^# \K\d+' "$CURRENT_FILE" 2>/dev/null | sort -n | tail -1)
+[ -z "$NUM" ] && NUM=0
+NUM=$((NUM + 1))
+
+# Ask Claude
+echo ""
+echo "Asking Claude..."
+RESPONSE=$(claude "$MESSAGE" 2>&1)
+
+# Append to file
+cat >> "$CURRENT_FILE" << EOF
+
+# $NUM
+
+**Question:**
+$MESSAGE
+
+**Answer:**
+$RESPONSE
+
+---
+
+EOF
+
+echo ""
+echo "✓ Added question #$NUM to $(basename "$CURRENT_FILE")"
+echo ""
+read -p "Press Enter to close..."
