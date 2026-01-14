@@ -15,20 +15,116 @@ vim.cmd([[highlight clear SignColumn]])
 vim.cmd([[highlight clear LineNr]])
 vim.cmd([[highlight clear CursorLineNr]])
 
+vim.keymap.set('n', '<leader>1', ':diffget LOCAL<CR>')
+vim.keymap.set('n', '<leader>2', ':diffget BASE<CR>')
+vim.keymap.set('n', '<leader>3', ':diffget REMOTE<CR>')
+
+-- Next heading
+vim.keymap.set('n', ']h', function()
+  vim.fn.search('^#\\s')
+end, { desc = "Next heading" })
+
+-- Previous heading
+vim.keymap.set('n', '[h', function()
+  vim.fn.search('^#\\s', 'b')
+end, { desc = "Previous heading" })
+
+-- This is so im able to open other projects and select a file no matter what project im on
+vim.keymap.set('n', '<leader>fp', function()
+  local pickers = require('telescope.pickers')
+  local finders = require('telescope.finders')
+  local actions = require('telescope.actions')
+  local action_state = require('telescope.actions.state')
+  local conf = require('telescope.config').values
+  
+  -- Find all directories in Documents/Github
+  local scan = require('plenary.scandir')
+  local base_path = vim.fn.expand("~/Documents/Github")
+  local dirs = scan.scan_dir(base_path, {
+    only_dirs = true,
+    depth = 1, -- only immediate subdirectories
+  })
+  
+  -- Make them relative for nicer display
+  local projects = {}
+  for _, dir in ipairs(dirs) do
+    local name = dir:match("([^/]+)$") -- get just the folder name
+    table.insert(projects, { name = name, path = dir })
+  end
+  
+  pickers.new({}, {
+    prompt_title = "📁 Select Project",
+    finder = finders.new_table({
+      results = projects,
+      entry_maker = function(entry)
+        return {
+          value = entry.path,
+          display = entry.name,
+          ordinal = entry.name,
+        }
+      end
+    }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local project = action_state.get_selected_entry()
+        actions.close(prompt_bufnr)
+        
+        -- Now pick a file from that project
+        require('telescope.builtin').find_files({
+          prompt_title = "📄 " .. project.display,
+          cwd = project.value,
+          attach_mappings = function(file_bufnr)
+            actions.select_default:replace(function()
+              local file = action_state.get_selected_entry()
+              actions.close(file_bufnr)
+              
+              -- Open in tmux pane
+              vim.fn.system(string.format(
+                "tmux split-window -h -c '%s' 'nvim %s'",
+                project.value,
+                file.value
+              ))
+            end)
+            return true
+          end,
+        })
+      end)
+      return true  -- <-- This was missing!
+    end,
+  }):find()  -- <-- This was missing!
+end)
+
+
+-- This is needed so that i can copy / delete / select inside a code block using yic, dic, vic etc...
+vim.keymap.set({'o', 'x'}, 'ic', function()
+  -- Find opening fence
+  local start_line = vim.fn.search('^```', 'bnW')
+  -- Find closing fence
+  local end_line = vim.fn.search('^```', 'nW')
+
+  if start_line > 0 and end_line > 0 then
+    -- Select from line after opening to line before closing
+    vim.cmd('normal! ' .. (start_line + 1) .. 'GV' .. (end_line - 1) .. 'G')
+  end
+end, {silent = true, desc = "Inside code fence"})
+
+
+-- This keybind is for claude code, where i press leader ma to append to the markdown with claude
 vim.keymap.set('n', '<leader>ma', function()
   local current_file = vim.fn.expand('%:p')
-  
+
   if current_file == '' or not current_file:match('%.md$') then
     print('Not a markdown file')
     return
   end
-  
+
   vim.cmd('write')
-  
+
   -- Split to the RIGHT with -h (horizontal split)
-  local cmd = string.format('tmux split-window -h -l 80%% "claude-append \'%s\'; tmux kill-pane"', current_file)
+  local cmd = string.format('tmux split-window -h -l 40%% "claude-append \'%s\'; tmux kill-pane"', current_file)
   vim.fn.system(cmd)
-  
+
   vim.defer_fn(function()
     vim.cmd('edit!')
     vim.cmd('normal! G')
@@ -36,8 +132,8 @@ vim.keymap.set('n', '<leader>ma', function()
 end)
 
 vim.keymap.set('n', '<leader>mn', function()
-  vim.fn.system('tmux split-window -h -l 80% "claude-new; tmux kill-pane"')
-  
+  vim.fn.system('tmux split-window -h -l 40% "claude-new; tmux kill-pane"')
+
   vim.defer_fn(function()
     local newest = vim.fn.system('ls -t ~/claude-convos/*.md 2>/dev/null | head -1'):gsub('%s+', '')
     if newest ~= '' then
@@ -50,18 +146,18 @@ end)
 vim.keymap.set('n', '<leader>mc', function()
   -- Get files sorted by newest
   local files = vim.fn.systemlist('ls -t ~/claude-convos/*.md 2>/dev/null')
-  
+
   -- Create a quickfix list with them
   local qf_list = {}
   for _, file in ipairs(files) do
     table.insert(qf_list, {filename = file, lnum = 1})
   end
-  
+
   vim.fn.setqflist(qf_list)
   vim.cmd('copen')
 end, { desc = 'Browse Claude conversations (newest first)' })
 
- 
+
 vim.keymap.set('n', '<leader>jf', ':%!prettier --parser babel --stdin-filepath file.js 2>/dev/null || cat<CR>', 
   { desc = 'Format as JavaScript' })
 
@@ -69,38 +165,39 @@ vim.keymap.set('n', '<leader>jf', ':%!prettier --parser babel --stdin-filepath f
 vim.keymap.set('n', '<leader>cd', function()
   local cwd = vim.fn.getcwd()
   local dirs = vim.fn.systemlist('find "' .. cwd .. '" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null')
-  
+
   if #dirs == 0 then
     print('No subdirectories found in: ' .. vim.fn.fnamemodify(cwd, ':~'))
     return
   end
-  
+
   vim.ui.select(dirs, {
     prompt = 'Select directory (current: ' .. vim.fn.fnamemodify(cwd, ':~') .. ')',
     format_item = function(item)
       return vim.fn.fnamemodify(item, ':t')
     end,
   }, function(choice)
-    if choice then
-      vim.cmd('lcd ' .. vim.fn.fnameescape(choice))
-      
-      -- Update nvim-tree
-      local api = require('nvim-tree.api')
-      api.tree.change_root(choice)
-      
-      print('📁 ' .. vim.fn.fnamemodify(choice, ':~'))
-    end
-  end)
+      if choice then
+        vim.cmd('lcd ' .. vim.fn.fnameescape(choice))
+
+        -- Update nvim-tree
+        local api = require('nvim-tree.api')
+        api.tree.change_root(choice)
+
+        print('📁 ' .. vim.fn.fnamemodify(choice, ':~'))
+      end
+    end)
 end, { desc = "Change directory (down)" })
+
 -- Navigate up: Go to parent directorny
 vim.keymap.set('n', '<leader>cu', function()
   local parent = vim.fn.fnamemodify(vim.fn.getcwd(), ':h')
   vim.cmd('lcd ..')
-  
+
   -- Update nvim-tree
   local api = require('nvim-tree.api')
   api.tree.change_root(parent)
-  
+
   print('📁 ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':~'))
 end, { desc = "Change directory (up)" })
 
@@ -114,11 +211,11 @@ vim.keymap.set('n', '<leader>cr', function()
   local start_dir = vim.fn.getenv('PWD')
   if start_dir and start_dir ~= vim.NIL then
     vim.cmd('lcd ' .. vim.fn.fnameescape(start_dir))
-    
+
     -- Update nvim-tree
     local api = require('nvim-tree.api')
     api.tree.change_root(start_dir)
-    
+
     print('📁 Reset to: ' .. vim.fn.fnamemodify(start_dir, ':~'))
   end
 end, { desc = "Reset to initial directory" })
@@ -211,17 +308,17 @@ vim.keymap.set("n", "<leader>=", "<C-w>=", { desc = "Equal window sizes" })
 
 -- In your init.lua or a separate config file
 vim.api.nvim_create_autocmd("FileType", {
-	pattern = "neo-tree",
-	callback = function()
-		vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#dde1e6" })
-		vim.api.nvim_set_hl(0, "NeoTreeFileNameOpened", { fg = "#ffffff" })
-	end,
+  pattern = "neo-tree",
+  callback = function()
+    vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#dde1e6" })
+    vim.api.nvim_set_hl(0, "NeoTreeFileNameOpened", { fg = "#ffffff" })
+  end,
 })
 
 -- Notes command - opens nvim in notes directory in temporary tmux window
 vim.api.nvim_create_user_command('Notes', function()
   local notes_dir = vim.fn.expand('~/notes')
-  
+
   -- Check if we're in tmux
   if vim.env.TMUX then
     -- Create new tmux window, cd to notes, open nvim with index.md

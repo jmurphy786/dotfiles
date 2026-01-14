@@ -1,19 +1,36 @@
 #!/usr/bin/env bash
 set -e
 
-CURRENT_FILE="$1"
+# Convert to absolute path
+CURRENT_FILE="$(readlink -f "$1")"
+CONVOS_DIR="${CLAUDE_CONVOS_DIR:-$HOME/claude-convos}"
+CONVOS_SUBDIR="$CONVOS_DIR/convos"
+SESSIONS_DIR="$CONVOS_DIR/sessions"
+
+BASENAME=$(basename "${CURRENT_FILE%.md}")
+SESSION_FILE="$SESSIONS_DIR/${BASENAME}.session"
 
 if [ -z "$CURRENT_FILE" ] || [ ! -f "$CURRENT_FILE" ]; then
     echo "Error: No file provided or file doesn't exist"
-    read -p "Press Enter..."
+    sleep 2
     exit 1
 fi
 
 if [[ ! "$CURRENT_FILE" =~ \.md$ ]]; then
     echo "Error: Not a markdown file"
-    read -p "Press Enter..."
+    sleep 2
     exit 1
 fi
+
+# Check for session file
+if [ ! -f "$SESSION_FILE" ]; then
+    echo "Error: No session file found at: $SESSION_FILE"
+    echo "This file wasn't created with claude-new."
+    sleep 3
+    exit 1
+fi
+
+SESSION_ID=$(cat "$SESSION_FILE")
 
 # Compose message
 TEMP_MSG=$(mktemp --suffix=.md)
@@ -26,7 +43,6 @@ MESSAGE=$(sed '1,2d' "$TEMP_MSG")
 rm "$TEMP_MSG"
 
 if [ -z "$MESSAGE" ]; then
-    echo "No message entered"
     exit 0
 fi
 
@@ -35,14 +51,28 @@ NUM=$(grep -oP '^# \K\d+' "$CURRENT_FILE" 2>/dev/null | sort -n | tail -1)
 [ -z "$NUM" ] && NUM=0
 NUM=$((NUM + 1))
 
-# Ask Claude
+# Ask Claude - RESUME existing session
 echo ""
-echo "Asking Claude..."
-RESPONSE=$(claude "$MESSAGE" 2>&1)
+echo "Asking Claude (Session: $SESSION_ID)..."
+set +e
+RESPONSE=$(claude --resume "$SESSION_ID" --dangerously-skip-permissions "$MESSAGE" 2>&1)
+CLAUDE_EXIT=$?
+set -e
+
+if [ $CLAUDE_EXIT -ne 0 ]; then
+    echo ""
+    echo "Error: Claude command failed (exit code: $CLAUDE_EXIT)"
+    echo "Session ID: $SESSION_ID"
+    echo ""
+    echo "Response:"
+    echo "$RESPONSE"
+    echo ""
+    read -p "Press Enter to continue..."
+    exit 1
+fi
 
 # Append to file
 cat >> "$CURRENT_FILE" << EOF
-
 # $NUM
 
 **Question:**
@@ -57,5 +87,4 @@ EOF
 
 echo ""
 echo "✓ Added question #$NUM to $(basename "$CURRENT_FILE")"
-echo ""
-read -p "Press Enter to close..."
+sleep 1

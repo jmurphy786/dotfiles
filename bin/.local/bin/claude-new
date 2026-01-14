@@ -2,7 +2,10 @@
 set -e
 
 CONVOS_DIR="${CLAUDE_CONVOS_DIR:-$HOME/claude-convos}"
-mkdir -p "$CONVOS_DIR"
+CONVOS_SUBDIR="$CONVOS_DIR/convos"
+SESSIONS_DIR="$CONVOS_DIR/sessions"
+
+mkdir -p "$CONVOS_SUBDIR" "$SESSIONS_DIR"
 
 # Compose message
 TEMP_MSG=$(mktemp --suffix=.md)
@@ -26,19 +29,29 @@ if [ -z "$MESSAGE" ]; then
     exit 0
 fi
 
-# Ask Claude
+# Create new session ID
+SESSION_ID=$(uuidgen)
+
+# Ask Claude with new session
 echo ""
 echo "Asking Claude..."
-RESPONSE=$(claude "$MESSAGE" 2>&1)
+RESPONSE=$(claude --session-id "$SESSION_ID" --dangerously-skip-permissions "$MESSAGE" 2>&1)
 
 # Create new file
 TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
 TITLE=$(echo "$MESSAGE" | head -1 | cut -c 1-30 | tr ' ' '-' | tr -cd '[:alnum:]-')
-NEW_FILE="$CONVOS_DIR/${TIMESTAMP}-${TITLE}.md"
+NEW_FILE="$CONVOS_SUBDIR/${TIMESTAMP}-${TITLE}.md"
+BASENAME=$(basename "${NEW_FILE%.md}")
+SESSION_FILE="$SESSIONS_DIR/${BASENAME}.session"
 
+# Save session ID
+echo "$SESSION_ID" > "$SESSION_FILE"
+
+# Create markdown file
 cat > "$NEW_FILE" << EOF
 # Claude Conversation
 *Started: $(date '+%Y-%m-%d %H:%M:%S')*
+*Session: $SESSION_ID*
 
 ---
 
@@ -55,9 +68,9 @@ $RESPONSE
 EOF
 
 echo ""
-echo "✓ Created: $NEW_FILE"
-echo ""
-read -p "Press Enter to open..."
+echo "✓ Created: $(basename "$NEW_FILE")"
 
-# Output the filename for tmux to capture
-echo "$NEW_FILE"
+# Auto-open the file
+nvim "$NEW_FILE"
+
+exec $SHELL

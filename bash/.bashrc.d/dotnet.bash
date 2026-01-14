@@ -9,149 +9,182 @@ _process_aspire_logs() {
   local log_file="$1"
 
   awk '
+  BEGIN {
+    in_activity = 0
+    activity_lines = ""
+  }
   {
-    line = $0
+    # Extract content after timestamp
+    if (match($0, /[0-9]+:[[:space:]]+[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9TZ:.+-]+[[:space:]]+/)) {
+      content = substr($0, RSTART + RLENGTH)
+    } else {
+      next
+    }
     
-    # Skip empty lines
-    if (line ~ /^[[:space:]]*$/) next
+    # Start of activity
+    if (content ~ /^Activity\.TraceId:/) {
+      if (in_activity) {
+        process_activity(activity_lines)
+      }
+      in_activity = 1
+      activity_lines = content
+      next
+    }
     
-    # Aspire format: JSON is on lines that start with spaces and a number
-    # Example: "      2: 2025-12-23T16:04:17.2830000Z {json here}"
-    if (match(line, /^[[:space:]]+[0-9]+:[[:space:]]+[0-9T:.Z-]+[[:space:]]+(\{.*\})$/, arr)) {
-      # Extract just the JSON part (after the timestamp)
-      json_start = index(line, "{")
-      if (json_start > 0) {
-        json = substr(line, json_start)
-        
-        # Check if it'\''s our compact format
-        if (match(json, /"ts":/) && match(json, /"level":/) && match(json, /"msg":/)) {
-          process_compact_json(json)
-        }
-        # Or Microsoft'\''s format
-        else if (match(json, /"Timestamp":/) && match(json, /"LogLevel":/) && match(json, /"Message":/)) {
-          process_microsoft_json(json)
-        }
+    # In activity
+    if (in_activity) {
+      # Empty content = end of activity
+      if (content ~ /^[[:space:]]*$/) {
+        process_activity(activity_lines)
+        in_activity = 0
+        activity_lines = ""
+      } else {
+        activity_lines = activity_lines "\n" content
       }
     }
   }
-
-  function process_compact_json(json) {
-    # Extract fields from compact format
-    level = extract_field(json, "level")
-    timestamp = extract_field(json, "ts")
-    location = extract_field(json, "loc")
-    message = extract_field(json, "msg")
-    
-    # Format timestamp as HH:MM:SS
-    time = ""
-    if (match(timestamp, /[0-9]{2}:[0-9]{2}:[0-9]{2}/)) {
-      time = substr(timestamp, RSTART, RLENGTH)
+  
+  END {
+    if (in_activity) {
+      process_activity(activity_lines)
     }
-    
-    # Truncate message for preview
-    if (length(message) > 60) {
-      message = substr(message, 1, 60) "..."
-    }
-    
-    # Set color
-    color = get_color(level)
-    
-    # Build display
-    indicator = color level "\033[0m"
-    display = indicator
-    
-    if (location != "") {
-      display = display " \033[90m" location "\033[0m"
-    }
-    if (time != "") {
-      display = display " " time
-    }
-    if (message != "") {
-      display = display " " message
-    }
-    
-    # Add padding
-    padding = "                                                                                                                                                                  "
-    
-    # Output: display + padding + TAB + JSON
-    print display padding "\t" json
   }
 
-  function process_microsoft_json(json) {
-    # Extract fields from Microsoft format
-    level = extract_field(json, "LogLevel")
-    timestamp = extract_field(json, "Timestamp")
-    category = extract_field(json, "Category")
-    message = extract_field(json, "Message")
+  function process_activity(text) {
+    # Init
+    trace_id = span_id = parent_span_id = display_name = kind = ""
+    start_time = duration = trace_flags = source = service_name = ""
+    delete tags
+    tag_count = 0
+    in_tags = 0
     
-    # Normalize level
-    if (level == "Information") level = "INFO"
-    else if (level == "Warning") level = "WARN"
-    else if (level == "Error") level = "ERROR"
-    else if (level == "Critical") level = "CRITICAL"
-    else if (level == "Debug") level = "DEBUG"
-    else if (level == "Trace") level = "TRACE"
+    n = split(text, lines, "\n")
     
-    # Simplify category
-    if (category != "") {
-      split(category, parts, ".")
-      category = parts[length(parts)]
+    for (i = 1; i <= n; i++) {
+      line = lines[i]
+      
+      # Check for Activity.Tags marker
+      if (line == "Activity.Tags:") {
+        in_tags = 1
+        continue
+      }
+      
+      # If in tags mode, collect tags until we hit a non-tag line
+      if (in_tags) {
+        if (index(line, ":") > 0 && line !~ /^Activity\./ && line !~ /^Instrumentation/ && line !~ /^Resource/) {
+          # This is a tag
+          colon = index(line, ":")
+          k = substr(line, 1, colon - 1)
+          v = substr(line, colon + 1)
+          # Trim
+          gsub(/^[[:space:]]+/, "", k)
+          gsub(/[[:space:]]+$/, "", k)
+          gsub(/^[[:space:]]+/, "", v)
+          gsub(/[[:space:]]+$/, "", v)
+          # Escape
+          gsub(/\\/, "\\\\", v)
+          gsub(/"/, "\\\"", v)
+          tags[k] = v
+          tag_count++
+          continue
+        } else {
+          # Not a tag anymore, exit tags mode
+          in_tags = 0
+        }
+      }
+      
+      # Parse activity properties
+      if (line ~ /^Activity\.TraceId:/) {
+        gsub(/^Activity\.TraceId:[[:space:]]*/, "", line)
+        trace_id = line
+      }
+      else if (line ~ /^Activity\.SpanId:/) {
+        gsub(/^Activity\.SpanId:[[:space:]]*/, "", line)
+        span_id = line
+      }
+      else if (line ~ /^Activity\.ParentSpanId:/) {
+        gsub(/^Activity\.ParentSpanId:[[:space:]]*/, "", line)
+        parent_span_id = line
+      }
+      else if (line ~ /^Activity\.DisplayName:/) {
+        gsub(/^Activity\.DisplayName:[[:space:]]*/, "", line)
+        display_name = line
+      }
+      else if (line ~ /^Activity\.Kind:/) {
+        gsub(/^Activity\.Kind:[[:space:]]*/, "", line)
+        kind = line
+      }
+      else if (line ~ /^Activity\.StartTime:/) {
+        gsub(/^Activity\.StartTime:[[:space:]]*/, "", line)
+        start_time = line
+      }
+      else if (line ~ /^Activity\.Duration:/) {
+        gsub(/^Activity\.Duration:[[:space:]]*/, "", line)
+        duration = line
+      }
+      else if (line ~ /^Activity\.TraceFlags:/) {
+        gsub(/^Activity\.TraceFlags:[[:space:]]*/, "", line)
+        trace_flags = line
+      }
+      else if (line ~ /^Name:/) {
+        gsub(/^Name:[[:space:]]*/, "", line)
+        source = line
+      }
+      else if (line ~ /^service\.name:/) {
+        gsub(/^service\.name:[[:space:]]*/, "", line)
+        service_name = line
+      }
     }
     
-    # Format timestamp as HH:MM:SS
-    time = ""
-    if (match(timestamp, /[0-9]{2}:[0-9]{2}:[0-9]{2}/)) {
-      time = substr(timestamp, RSTART, RLENGTH)
+    # Build tags JSON
+    tags_json = ""
+    for (k in tags) {
+      if (tags_json != "") tags_json = tags_json ", "
+      tags_json = tags_json "\"" k "\": \"" tags[k] "\""
     }
     
-    # Truncate message
-    if (length(message) > 60) {
-      message = substr(message, 1, 60) "..."
+    # Build JSON
+    j = "{"
+    j = j "\"TraceId\":\"" trace_id "\""
+    j = j ",\"SpanId\":\"" span_id "\""
+    if (parent_span_id != "") j = j ",\"ParentSpanId\":\"" parent_span_id "\""
+    j = j ",\"DisplayName\":\"" display_name "\""
+    j = j ",\"Kind\":\"" kind "\""
+    j = j ",\"StartTime\":\"" start_time "\""
+    j = j ",\"Duration\":\"" duration "\""
+    j = j ",\"TraceFlags\":\"" trace_flags "\""
+    if (source != "") j = j ",\"Source\":\"" source "\""
+    if (service_name != "") j = j ",\"ServiceName\":\"" service_name "\""
+    if (tags_json != "") j = j ",\"Tags\":{" tags_json "}"
+    j = j "}"
+    
+    # Display
+    sc = ""
+    if ("http.response.status_code" in tags) sc = tags["http.response.status_code"]
+    
+    col = "\033[36m"
+    if (sc >= 500) col = "\033[31m"
+    else if (sc >= 400) col = "\033[33m"
+    else if (sc >= 200) col = "\033[32m"
+    
+    tm = ""
+    if (match(start_time, /T[0-9]{2}:[0-9]{2}:[0-9]{2}/)) {
+      tm = substr(start_time, RSTART + 1, 8)
     }
     
-    # Set color
-    color = get_color(level)
-    
-    # Build display
-    indicator = color level "\033[0m"
-    display = indicator
-    
-    if (category != "") {
-      display = display " \033[90m" category "\033[0m"
+    d = col "TRACE\033[0m \033[35m" kind "\033[0m"
+    if (display_name != "") {
+      nm = display_name
+      if (length(nm) > 45) nm = substr(nm, 1, 45) "..."
+      d = d " \033[1m" nm "\033[0m"
     }
-    if (time != "") {
-      display = display " " time
-    }
-    if (message != "") {
-      display = display " " message
-    }
+    if (sc != "") d = d " \033[90m[" sc "]\033[0m"
+    if (duration != "") d = d " \033[90m" duration "\033[0m"
+    if (tm != "") d = d " " tm
+    if (tag_count > 0) d = d " \033[90m(" tag_count " tags)\033[0m"
     
-    # Add padding
-    padding = "                                                                                                                                                                  "
-    
-    print display padding "\t" json
-  }
-
-  function extract_field(json, field_name) {
-    # Extract value of "field_name":"value"
-    pattern = "\"" field_name "\":\"([^\"]+)\""
-    if (match(json, pattern)) {
-      start = index(json, "\"" field_name "\":\"") + length(field_name) + 4
-      remaining = substr(json, start)
-      end = index(remaining, "\"")
-      return substr(remaining, 1, end - 1)
-    }
-    return ""
-  }
-
-  function get_color(level) {
-    if (level == "CRITICAL") return "\033[1;31m"
-    else if (level == "ERROR") return "\033[31m"
-    else if (level == "WARN") return "\033[33m"
-    else if (level == "INFO") return "\033[32m"
-    else if (level == "DEBUG") return "\033[34m"
-    else if (level == "TRACE") return "\033[90m"
-    return "\033[32m"
+    pad = "                                                                                                                                                                  "
+    print d pad "\t" j
   }
   ' "$log_file" | tac
 }
@@ -223,17 +256,13 @@ asplog() {
           --bind "ctrl-/:toggle-preview" \
           --bind "alt-up:preview-half-page-up" \
           --bind "alt-down:preview-half-page-down" \
-          --bind "ctrl-h:execute-silent(tmux select-pane -L)" \
-          --bind "ctrl-j:execute-silent(tmux select-pane -D)" \
-          --bind "ctrl-k:execute-silent(tmux select-pane -U)" \
-          --bind "ctrl-l:execute-silent(tmux select-pane -R)" \
           --bind "enter:execute(
             tmp=\$(mktemp --suffix=.json)
             cut -f2 <<< {} | jq . > \$tmp 2>/dev/null || cut -f2 <<< {} > \$tmp
             nvim -c 'set ft=json' \$tmp
             rm -f \$tmp
           )" \
-          --header "🔍 SEARCH MODE | ESC to return to live view | Ctrl-R: reload | Ctrl-/: toggle preview | Enter: open in nvim"
+          --header "🔍 SEARCH | ESC: live | Ctrl-R: reload | Ctrl-/: preview | Enter: nvim"
       
     elif [[ "$key" == "q" || "$key" == "Q" ]]; then
       echo ""
