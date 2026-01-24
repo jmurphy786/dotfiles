@@ -60,12 +60,8 @@ PROMPT_COMMAND=""
 export PATH="$HOME/bin:$PATH"
 export PATH="$HOME/.tmuxifier/bin:$PATH"
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
-export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-export PATH="/mnt/c/Program Files/WezTerm:$PATH"  # ✅
 source "$HOME/.bash_module_loader"
 eval "$(tmuxifier init -)"
-# Add Homebrew to PATH
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 alias tdev='tmuxifier load-session dev'
 alias tkill='tmux kill-server'
 
@@ -109,8 +105,6 @@ export CLAUDE_CONVOS_DIR="$HOME/claude-convos"
 #fastfetch
 
 alias bat='batcat'
-
-
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

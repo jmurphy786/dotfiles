@@ -23,8 +23,8 @@ build/
 .steam/
 EOF
 
-source /usr/share/doc/fzf/examples/key-bindings.bash
-source /usr/share/doc/fzf/examples/completion.bash
+source /usr/share/fzf/key-bindings.bash
+source /usr/share/fzf/completion.bash
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
 # Use fd for fzf completion (respects .fdignore)
