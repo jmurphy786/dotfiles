@@ -8,6 +8,10 @@ vim.opt.number = true
 vim.opt.swapfile = false
 vim.opt.clipboard = "unnamedplus"
 
+vim.g.dbs = {
+  { name = 'supabase', url = vim.env.SUPABASE_DB_URL},
+}
+
 -- Remove sign column background
 vim.cmd([[highlight clear SignColumn]])
 
