@@ -3,7 +3,10 @@ return {
 		"hrsh7th/cmp-nvim-lsp",
 	},
 	{
-		"hrsh7th/cmp-buffer",  -- ADD THIS
+		"hrsh7th/cmp-buffer",
+	},
+	{
+		"hrsh7th/cmp-path",
 	},
 	{
 		"L3MON4D3/LuaSnip",
@@ -32,11 +35,19 @@ return {
 					["<C-f>"] = cmp.mapping.scroll_docs(4),
 					["<C-Space>"] = cmp.mapping.complete(),
 					["<C-e>"] = cmp.mapping.abort(),
-					["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+					["<CR>"] = cmp.mapping.confirm({ select = true }),
 				}),
 				sources = cmp.config.sources({
-					{ name = "nvim_lsp" }, -- For luasnip users.
-					{ name = "luasnip" }, -- For luasnip users.
+					{
+						name = "nvim_lsp",
+						option = {
+							markdown_oxide = {
+								keyword_pattern = [[\(\k\| \|\/\|#\)\+]]
+							}
+						}
+					},
+					{ name = "luasnip" },
+					{ name = "path" },
 				}, {
 					{ name = "buffer" },
 				}),

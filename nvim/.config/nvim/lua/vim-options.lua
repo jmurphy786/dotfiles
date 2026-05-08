@@ -1,251 +1,84 @@
+-- ============================================================
+-- EDITOR OPTIONS
+-- ============================================================
+
+-- Indentation
 vim.cmd("set expandtab")
 vim.cmd("set tabstop=2")
 vim.cmd("set softtabstop=2")
 vim.cmd("set shiftwidth=2")
 
-vim.g.mapleader = " "
+-- Line numbers
+vim.opt.relativenumber = true
 vim.opt.number = true
+
+-- General
+vim.g.mapleader = " "
 vim.opt.swapfile = false
 vim.opt.clipboard = "unnamedplus"
+vim.opt.autoread = true
+vim.opt.autowriteall = false
+vim.opt.lazyredraw = false
+vim.opt.ttimeoutlen = 10  -- default is often too high
+-- Folding (treesitter-based)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
+vim.opt.foldlevel = 99
 
-vim.g.dbs = {
-  { name = 'supabase', url = vim.env.SUPABASE_DB_URL},
+
+-- ============================================================
+-- CLIPBOARD (WSL  Windows)
+-- ============================================================
+
+vim.g.clipboard = {
+  name = "WslClipboard",
+  copy = {
+    ["+"] = "clip.exe",
+    ["*"] = "clip.exe",
+  },
+  paste = {
+    ["+"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+    ["*"] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+  },
+  cache_enabled = 0,
 }
 
--- Remove sign column background
-vim.cmd([[highlight clear SignColumn]])
+vim.g.netrw_browsex_viewer = "explorer.exe"
 
--- Remove line number background
+
+-- ============================================================
+-- APPEARANCE
+-- ============================================================
+
+-- Transparent backgrounds
+vim.api.nvim_set_hl(0, "Normal",        { bg = "NONE" })
+vim.api.nvim_set_hl(0, "NormalFloat",   { bg = "NONE" })
+vim.api.nvim_set_hl(0, "LineNr",        { bg = "NONE" })
+vim.api.nvim_set_hl(0, "SignColumn",    { bg = "NONE" })
+vim.api.nvim_set_hl(0, "CursorLineNr", { bg = "NONE" })
+
+vim.cmd([[highlight clear SignColumn]])
 vim.cmd([[highlight clear LineNr]])
 vim.cmd([[highlight clear CursorLineNr]])
 
-vim.keymap.set('n', '<leader>1', ':diffget LOCAL<CR>')
-vim.keymap.set('n', '<leader>2', ':diffget BASE<CR>')
-vim.keymap.set('n', '<leader>3', ':diffget REMOTE<CR>')
+-- Diagnostic line highlights
+vim.cmd([[highlight DiagnosticLineError guibg=#3f1f1f gui=NONE]])
+vim.cmd([[highlight DiagnosticLineWarn  guibg=#3f3f1f gui=NONE]])
 
--- Next heading
-vim.keymap.set('n', ']h', function()
-  vim.fn.search('^#\\s')
-end, { desc = "Next heading" })
-
--- Previous heading
-vim.keymap.set('n', '[h', function()
-  vim.fn.search('^#\\s', 'b')
-end, { desc = "Previous heading" })
-
--- This is so im able to open other projects and select a file no matter what project im on
-vim.keymap.set('n', '<leader>fp', function()
-  local pickers = require('telescope.pickers')
-  local finders = require('telescope.finders')
-  local actions = require('telescope.actions')
-  local action_state = require('telescope.actions.state')
-  local conf = require('telescope.config').values
-  
-  -- Find all directories in Documents/Github
-  local scan = require('plenary.scandir')
-  local base_path = vim.fn.expand("~/Documents/Github")
-  local dirs = scan.scan_dir(base_path, {
-    only_dirs = true,
-    depth = 1, -- only immediate subdirectories
-  })
-  
-  -- Make them relative for nicer display
-  local projects = {}
-  for _, dir in ipairs(dirs) do
-    local name = dir:match("([^/]+)$") -- get just the folder name
-    table.insert(projects, { name = name, path = dir })
-  end
-  
-  pickers.new({}, {
-    prompt_title = "📁 Select Project",
-    finder = finders.new_table({
-      results = projects,
-      entry_maker = function(entry)
-        return {
-          value = entry.path,
-          display = entry.name,
-          ordinal = entry.name,
-        }
-      end
-    }),
-    sorter = conf.generic_sorter({}),
-    attach_mappings = function(prompt_bufnr)
-      actions.select_default:replace(function()
-        local project = action_state.get_selected_entry()
-        actions.close(prompt_bufnr)
-        
-        -- Now pick a file from that project
-        require('telescope.builtin').find_files({
-          prompt_title = "📄 " .. project.display,
-          cwd = project.value,
-          attach_mappings = function(file_bufnr)
-            actions.select_default:replace(function()
-              local file = action_state.get_selected_entry()
-              actions.close(file_bufnr)
-              
-              -- Open in tmux pane
-              vim.fn.system(string.format(
-                "tmux split-window -h -c '%s' 'nvim %s'",
-                project.value,
-                file.value
-              ))
-            end)
-            return true
-          end,
-        })
-      end)
-      return true  -- <-- This was missing!
-    end,
-  }):find()  -- <-- This was missing!
-end)
+-- Neo-tree filename colours
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "neo-tree",
+  callback = function()
+    vim.api.nvim_set_hl(0, "NeoTreeFileName",       { fg = "#dde1e6" })
+    vim.api.nvim_set_hl(0, "NeoTreeFileNameOpened", { fg = "#ffffff" })
+  end,
+})
 
 
--- This is needed so that i can copy / delete / select inside a code block using yic, dic, vic etc...
-vim.keymap.set({'o', 'x'}, 'ic', function()
-  -- Find opening fence
-  local start_line = vim.fn.search('^```', 'bnW')
-  -- Find closing fence
-  local end_line = vim.fn.search('^```', 'nW')
+-- ============================================================
+-- DIAGNOSTICS
+-- ============================================================
 
-  if start_line > 0 and end_line > 0 then
-    -- Select from line after opening to line before closing
-    vim.cmd('normal! ' .. (start_line + 1) .. 'GV' .. (end_line - 1) .. 'G')
-  end
-end, {silent = true, desc = "Inside code fence"})
-
-
--- This keybind is for claude code, where i press leader ma to append to the markdown with claude
-vim.keymap.set('n', '<leader>ma', function()
-  local current_file = vim.fn.expand('%:p')
-
-  if current_file == '' or not current_file:match('%.md$') then
-    print('Not a markdown file')
-    return
-  end
-
-  vim.cmd('write')
-
-  -- Split to the RIGHT with -h (horizontal split)
-  local cmd = string.format('tmux split-window -h -l 40%% "claude-append \'%s\'; tmux kill-pane"', current_file)
-  vim.fn.system(cmd)
-
-  vim.defer_fn(function()
-    vim.cmd('edit!')
-    vim.cmd('normal! G')
-  end, 500)
-end)
-
-vim.keymap.set('n', '<leader>mn', function()
-  vim.fn.system('tmux split-window -h -l 40% "claude-new; tmux kill-pane"')
-
-  vim.defer_fn(function()
-    local newest = vim.fn.system('ls -t ~/claude-convos/*.md 2>/dev/null | head -1'):gsub('%s+', '')
-    if newest ~= '' then
-      vim.cmd('edit ' .. newest)
-    end
-  end, 500)
-end)
-
--- Custom command to browse claude conversations sorted by newest
-vim.keymap.set('n', '<leader>mc', function()
-  -- Get files sorted by newest
-  local files = vim.fn.systemlist('ls -t ~/claude-convos/*.md 2>/dev/null')
-
-  -- Create a quickfix list with them
-  local qf_list = {}
-  for _, file in ipairs(files) do
-    table.insert(qf_list, {filename = file, lnum = 1})
-  end
-
-  vim.fn.setqflist(qf_list)
-  vim.cmd('copen')
-end, { desc = 'Browse Claude conversations (newest first)' })
-
-
-vim.keymap.set('n', '<leader>jf', ':%!prettier --parser babel --stdin-filepath file.js 2>/dev/null || cat<CR>', 
-  { desc = 'Format as JavaScript' })
-
--- Navigate down: Browse and select subdirectory
-vim.keymap.set('n', '<leader>cd', function()
-  local cwd = vim.fn.getcwd()
-  local dirs = vim.fn.systemlist('find "' .. cwd .. '" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null')
-
-  if #dirs == 0 then
-    print('No subdirectories found in: ' .. vim.fn.fnamemodify(cwd, ':~'))
-    return
-  end
-
-  vim.ui.select(dirs, {
-    prompt = 'Select directory (current: ' .. vim.fn.fnamemodify(cwd, ':~') .. ')',
-    format_item = function(item)
-      return vim.fn.fnamemodify(item, ':t')
-    end,
-  }, function(choice)
-      if choice then
-        vim.cmd('lcd ' .. vim.fn.fnameescape(choice))
-
-        -- Update nvim-tree
-        local api = require('nvim-tree.api')
-        api.tree.change_root(choice)
-
-        print('📁 ' .. vim.fn.fnamemodify(choice, ':~'))
-      end
-    end)
-end, { desc = "Change directory (down)" })
-
--- Navigate up: Go to parent directorny
-vim.keymap.set('n', '<leader>cu', function()
-  local parent = vim.fn.fnamemodify(vim.fn.getcwd(), ':h')
-  vim.cmd('lcd ..')
-
-  -- Update nvim-tree
-  local api = require('nvim-tree.api')
-  api.tree.change_root(parent)
-
-  print('📁 ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':~'))
-end, { desc = "Change directory (up)" })
-
--- Show current directory
-vim.keymap.set('n', '<leader>cw', function()
-  print('📁 ' .. vim.fn.fnamemodify(vim.fn.getcwd(), ':~'))
-end, { desc = "Show current directory" })
-
--- Reset to where nvim was opened
-vim.keymap.set('n', '<leader>cr', function()
-  local start_dir = vim.fn.getenv('PWD')
-  if start_dir and start_dir ~= vim.NIL then
-    vim.cmd('lcd ' .. vim.fn.fnameescape(start_dir))
-
-    -- Update nvim-tree
-    local api = require('nvim-tree.api')
-    api.tree.change_root(start_dir)
-
-    print('📁 Reset to: ' .. vim.fn.fnamemodify(start_dir, ':~'))
-  end
-end, { desc = "Reset to initial directory" })
-
-vim.api.nvim_set_hl(0, 'Normal', { bg = 'NONE' })
-vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'NONE' })
-vim.api.nvim_set_hl(0, 'LineNr', { bg = 'NONE' })
-vim.api.nvim_set_hl(0, 'SignColumn', { bg = 'NONE' })
-vim.api.nvim_set_hl(0, 'CursorLineNr', { bg = 'NONE' })
-
-vim.keymap.set("n", "<leader>ml", "<cmd>vsplit<cr>")
-vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Move to left window" })
-vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
-vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
-vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
-
--- Jump to next/previous diagnostic
-vim.keymap.set("n", "]d", function()
-  require("trouble").next({skip_groups = true, jump = true})
-end, { desc = "Next diagnostic" })
-
-vim.keymap.set("n", "[d", function()
-  require("trouble").prev({skip_groups = true, jump = true})
-end, { desc = "Previous diagnostic" })
-
--- Set up diagnostic signs and highlights
 vim.diagnostic.config({
   signs = true,
   underline = true,
@@ -253,87 +86,363 @@ vim.diagnostic.config({
   update_in_insert = false,
 })
 
--- Highlight the entire line with errors
-vim.cmd([[
-  highlight DiagnosticLineError guibg=#3f1f1f gui=NONE
-  highlight DiagnosticLineWarn guibg=#3f3f1f gui=NONE
-]])
-
--- Auto command to set line highlights
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
   callback = function()
     vim.diagnostic.show()
   end,
 })
 
+<<<<<<< HEAD
 -- reload all buffers
 vim.opt.autoread = true
 vim.opt.autowriteall = false  -- Don't auto-save
+=======
 
--- Force check on focus
+-- ============================================================
+-- AUTO COMMANDS
+-- ============================================================
+>>>>>>> 55ef126 (changes)
+
+-- Force buffer check when regaining focus
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
   command = "silent! checktime",
 })
 
+-- Prepopulate new meeting files
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*/meetings/*.md",
+  callback = function()
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local is_empty = #lines == 0 or (#lines == 1 and lines[1] == "")
+    if is_empty then
+      local name = vim.fn.expand("%:t:r")
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+        "# " .. name,
+        "",
+        "## Attendees",
+        "",
+        "## Notes",
+        "",
+        "## Action Items",
+        "",
+        "## Tasks",
+        "",
+      })
+    end
+  end,
+})
+
+-- Prepopulate new daily note files
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*/daily/*.md",
+  callback = function()
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local is_empty = #lines == 0 or (#lines == 1 and lines[1] == "")
+    if is_empty then
+      local date = vim.fn.expand("%:t:r")
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+        "# " .. date,
+        "",
+        "## Notes",
+        "",
+        "## Tasks",
+        "",
+      })
+    end
+  end,
+})
+
+
+-- ============================================================
+-- USER COMMANDS
+-- ============================================================
+
+-- :Meeting - pick a meeting type and create/open its note
+vim.api.nvim_create_user_command("Meeting", function()
+  local meeting_types = { "Weekly Refinement", "1-1", "Daily Standup" }
+
+  vim.ui.select(meeting_types, { prompt = "Meeting type:" }, function(selected)
+    if not selected then return end
+
+    local date     = os.date("%Y-%m-%d")
+    local filename = selected:gsub(" ", "-") .. "-" .. date .. ".md"
+    local filepath = vim.fn.expand("~/work-notes/meetings/") .. filename
+
+    if vim.fn.filereadable(filepath) == 0 then
+      vim.fn.writefile({
+        "# " .. selected .. " - " .. date,
+        "",
+        "## Notes",
+        "",
+        "## Tasks",
+        "",
+      }, filepath)
+    end
+
+    vim.cmd("edit " .. filepath)
+  end)
+end, { nargs = 0 })
+
+-- :Task <ID> - create/open a Jira task note eg. :Task NGP-417
+vim.api.nvim_create_user_command("Task", function(opts)
+  local task_id = opts.args
+
+  if task_id == "" then
+    vim.notify("Usage: :Task TRT-111", vim.log.levels.WARN)
+    return
+  end
+
+  if not task_id:match("^[A-Z]+%-%d+$") then
+    vim.notify("Invalid format - use PREFIX-NUMBER (e.g. TRT-111)", vim.log.levels.WARN)
+    return
+  end
+
+  local url      = "https://cirdan.atlassian.net/browse/" .. task_id
+  local filepath = vim.fn.expand("~/work-notes/tasks/") .. task_id .. ".md"
+
+  if vim.fn.filereadable(filepath) == 0 then
+    vim.fn.writefile({
+      "---",
+      "id: "   .. task_id,
+      "url: "  .. url,
+      "tags: [" .. task_id .. "]",
+      "---",
+      "# " .. task_id,
+      "",
+      "[" .. task_id .. "](" .. url .. ")",
+      "",
+      "## To Dos",
+      "",
+      "## Developer Notes",
+      "",
+      "## Testing",
+      "",
+    }, filepath)
+  end
+
+  vim.cmd("edit " .. filepath)
+end, { nargs = 1 })
+
+
+-- ============================================================
+-- KEYMAPS
+-- ============================================================
+
+-- Open URL under cursor in Windows default browser
+vim.keymap.set("n", "gx", function()
+  local url = vim.fn.expand("<cfile>")
+  vim.fn.jobstart({ "cmd.exe", "/c", "start", "", url }, { detach = true })
+end, { desc = "Open URL in browser" })
+
+-- Daily note
+vim.keymap.set("n", "<leader>dn", function()
+  local date = os.date("%Y-%m-%d")
+  local path  = vim.fn.expand("~/work-notes/daily/") .. date .. ".md"
+  vim.cmd("edit " .. path)
+end, { desc = "Open daily note" })
+
+-- Paste image from clipboard
+vim.keymap.set("n", "<leader>mp", function()
+  local img_dir = vim.fn.expand("%:p:h") .. "/images"
+  vim.fn.mkdir(img_dir, "p")
+
+  local tmp_win = "C:\\Users\\jordan.murphy\\AppData\\Local\\Temp\\nvim_paste.png"
+  local ps_cmd  = string.format(
+    'powershell.exe -c "Add-Type -AssemblyName System.Windows.Forms; \\$img = [System.Windows.Forms.Clipboard]::GetImage(); if (\\$img) { \\$img.Save(\'%s\') }"',
+    tmp_win
+  )
+
+  vim.fn.system(ps_cmd)
+  vim.fn.system("sleep 1")
+
+  vim.ui.input({ prompt = "Image name: " }, function(name)
+    local filename = (name and name ~= "") and (name .. ".png") or (os.date("%Y-%m-%d_%H-%M-%S") .. ".png")
+    local filepath  = img_dir .. "/" .. filename
+    local tmp_wsl   = vim.fn.system("wslpath -u '" .. tmp_win:gsub("\\", "\\\\") .. "'"):gsub("\n", "")
+
+    vim.fn.system("cp " .. tmp_wsl .. " " .. filepath)
+
+    if vim.fn.filereadable(filepath) == 1 then
+      local rel_path = "images/" .. filename
+      vim.api.nvim_put({ "![](" .. rel_path .. ")" }, "c", true, true)
+      vim.notify("Image saved: " .. rel_path)
+    else
+      vim.notify("No image in clipboard or save failed", vim.log.levels.ERROR)
+    end
+  end)
+end, { desc = "Paste image from clipboard" })
+
+-- Force reload all buffers
 vim.keymap.set("n", "<leader>r", function()
   vim.cmd("bufdo! edit!")
   print("All buffers force reloaded")
 end, { desc = "Force reload all buffers" })
 
--- bind to close a window
+-- Close current window
 vim.keymap.set("n", "<leader>k", "<cmd>close<CR>", { desc = "Close current window" })
 
-vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers sort_mru=true<cr>", { desc = "Find buffers (MRU)" })
-vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>", { desc = "Find files" })
-vim.keymap.set("n", "<leader>fg", "<cmd>Telescope live_grep<cr>", { desc = "Live grep" })
-vim.keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>", { desc = "Recent files" })
+-- Window splits & navigation
+vim.keymap.set("n", "<leader>ml", "<cmd>vsplit<cr>",                          { desc = "Vertical split" })
+vim.keymap.set("n", "<C-h>",      "<C-w>h",                                   { desc = "Move to left window" })
+vim.keymap.set("n", "<C-j>",      "<C-w>j",                                   { desc = "Move to window below" })
+vim.keymap.set("n", "<C-k>",      "<C-w>k",                                   { desc = "Move to window above" })
+vim.keymap.set("n", "<C-l>",      "<C-w>l",                                   { desc = "Move to right window" })
+vim.keymap.set("n", "<leader>=",  "<C-w>=",                                   { desc = "Equalise window sizes" })
 
--- resize all windows
-vim.keymap.set("n", "<C-Up>", ":resize +2<CR>", { desc = "Increase height" })
-vim.keymap.set("n", "<C-Down>", ":resize -2<CR>", { desc = "Decrease height" })
+-- Window resizing
+vim.keymap.set("n", "<C-Up>",    ":resize +2<CR>",          { desc = "Increase height" })
+vim.keymap.set("n", "<C-Down>",  ":resize -2<CR>",          { desc = "Decrease height" })
 vim.keymap.set("n", "<C-Right>", ":vertical resize +2<CR>", { desc = "Increase width" })
-vim.keymap.set("n", "<C-Left>", ":vertical resize -2<CR>", { desc = "Increase width" })
+vim.keymap.set("n", "<C-Left>",  ":vertical resize -2<CR>", { desc = "Decrease width" })
 
--- Bonus: equalize all windows quickly
-vim.keymap.set("n", "<leader>=", "<C-w>=", { desc = "Equal window sizes" })
+-- Diff helpers
+vim.keymap.set("n", "<leader>1", ":diffget LOCAL<CR>",  { desc = "Diff: take LOCAL" })
+vim.keymap.set("n", "<leader>2", ":diffget BASE<CR>",   { desc = "Diff: take BASE" })
+vim.keymap.set("n", "<leader>3", ":diffget REMOTE<CR>", { desc = "Diff: take REMOTE" })
 
--- In your init.lua or a separate config file
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "neo-tree",
-  callback = function()
-    vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#dde1e6" })
-    vim.api.nvim_set_hl(0, "NeoTreeFileNameOpened", { fg = "#ffffff" })
-  end,
-})
+-- Markdown heading navigation
+vim.keymap.set("n", "]h", function() vim.fn.search("^#\\s") end,        { desc = "Next heading" })
+vim.keymap.set("n", "[h", function() vim.fn.search("^#\\s", "b") end,   { desc = "Previous heading" })
 
--- Notes command - opens nvim in notes directory in temporary tmux window
-vim.api.nvim_create_user_command('Notes', function()
-  local notes_dir = vim.fn.expand('~/notes')
+-- Fold controls
+vim.keymap.set("n", "<leader>ft", "za", { desc = "Fold toggle" })
+vim.keymap.set("n", "<leader>fT", "zA", { desc = "Fold toggle parent" })
+vim.keymap.set("n", "<leader>fc", "zM", { desc = "Fold close all" })
+vim.keymap.set("n", "<leader>fo", "zR", { desc = "Fold open all" })
 
-  -- Check if we're in tmux
-  if vim.env.TMUX then
-    -- Create new tmux window, cd to notes, open nvim with index.md
-    vim.fn.system(string.format(
-      "tmux new-window -n 'notes' -c '%s' 'nvim index.md'",
-      notes_dir
-    ))
-  else
-    -- If not in tmux, cd and open in current nvim
-    vim.cmd('cd ' .. notes_dir)
-    vim.cmd('edit index.md')
+-- Diagnostics navigation
+vim.keymap.set("n", "]d", function()
+  require("trouble").next({ skip_groups = true, jump = true })
+end, { desc = "Next diagnostic" })
+
+vim.keymap.set("n", "[d", function()
+  require("trouble").prev({ skip_groups = true, jump = true })
+end, { desc = "Previous diagnostic" })
+
+-- Telescope
+vim.keymap.set("n", "<leader>fb", "<cmd>Telescope buffers sort_mru=true<cr>", { desc = "Find buffers (MRU)" })
+vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>",            { desc = "Find files" })
+vim.keymap.set("n", "<leader>fg", "<cmd>Telescope live_grep<cr>",             { desc = "Live grep" })
+vim.keymap.set("n", "<leader>fr", "<cmd>Telescope oldfiles<cr>",              { desc = "Recent files" })
+vim.keymap.set("n", "<leader>sk", "<cmd>Telescope keymaps<CR>",               { desc = "Search keymaps" })
+
+-- Text object: inside code fence (yic / dic / vic)
+vim.keymap.set({ "o", "x" }, "ic", function()
+  local start_line = vim.fn.search("^```", "bnW")
+  local end_line   = vim.fn.search("^```", "nW")
+  if start_line > 0 and end_line > 0 then
+    vim.cmd("normal! " .. (start_line + 1) .. "GV" .. (end_line - 1) .. "G")
   end
-end, {})
-
--- This is for adding in folds 
-vim.opt.foldmethod = 'expr'
-vim.opt.foldexpr = 'nvim_treesitter#foldexpr()'
-vim.opt.foldlevel = 99
-
-vim.keymap.set('n', '<leader>ft', 'za', { desc = 'Fold toggle' })
-vim.keymap.set('n', '<leader>fT', 'zA', { desc = 'Fold toggle parent' })
-vim.keymap.set('n', '<leader>fc', 'zM', { desc = 'Fold close all' })
-vim.keymap.set('n', '<leader>fo', 'zR', { desc = 'Fold open all' })
+end, { silent = true, desc = "Inside code fence" })
 
 
--- See all keybinds
-vim.keymap.set('n', '<leader>sk', '<cmd>Telescope keymaps<CR>', { desc = 'Search keymaps' })
+-- ============================================================
+-- TELESCOPE: PROJECT PICKER
+-- ============================================================
+
+-- <leader>fp - browse Github projects then pick a file within them
+vim.keymap.set("n", "<leader>fp", function()
+  local pickers      = require("telescope.pickers")
+  local finders      = require("telescope.finders")
+  local actions      = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+  local conf         = require("telescope.config").values
+  local scan         = require("plenary.scandir")
+
+  local base_path = vim.fn.expand("~/Documents/Github")
+  local dirs      = scan.scan_dir(base_path, { only_dirs = true, depth = 1 })
+
+  local projects = {}
+  for _, dir in ipairs(dirs) do
+    table.insert(projects, { name = dir:match("([^/]+)$"), path = dir })
+  end
+
+  pickers.new({}, {
+    prompt_title = "Select Project",
+    finder = finders.new_table({
+      results     = projects,
+      entry_maker = function(entry)
+        return { value = entry.path, display = entry.name, ordinal = entry.name }
+      end,
+    }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local project = action_state.get_selected_entry()
+        actions.close(prompt_bufnr)
+
+        require("telescope.builtin").find_files({
+          prompt_title = project.display,
+          cwd          = project.value,
+          attach_mappings = function(file_bufnr)
+            actions.select_default:replace(function()
+              local file = action_state.get_selected_entry()
+              actions.close(file_bufnr)
+
+              -- Open in the first non-floating window
+              for _, win in ipairs(vim.api.nvim_list_wins()) do
+                if vim.api.nvim_win_get_config(win).relative == "" then
+                  vim.api.nvim_set_current_win(win)
+                  break
+                end
+              end
+
+              vim.cmd("edit " .. vim.fn.fnameescape(file.value))
+            end)
+            return true
+          end,
+        })
+      end)
+      return true
+    end,
+  }):find()
+end, { desc = "Pick project + file" })
+
+
+-- ============================================================
+-- DIRECTORY NAVIGATION
+-- ============================================================
+
+-- <leader>cd - change into a subdirectory
+vim.keymap.set("n", "<leader>cd", function()
+  local cwd  = vim.fn.getcwd()
+  local dirs = vim.fn.systemlist('find "' .. cwd .. '" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null')
+
+  if #dirs == 0 then
+    print("No subdirectories found in: " .. vim.fn.fnamemodify(cwd, ":~"))
+    return
+  end
+
+  vim.ui.select(dirs, {
+    prompt      = "Select directory (current: " .. vim.fn.fnamemodify(cwd, ":~") .. ")",
+    format_item = function(item) return vim.fn.fnamemodify(item, ":t") end,
+  }, function(choice)
+    if not choice then return end
+    vim.cmd("lcd " .. vim.fn.fnameescape(choice))
+    require("nvim-tree.api").tree.change_root(choice)
+    print("  " .. vim.fn.fnamemodify(choice, ":~"))
+  end)
+end, { desc = "Change directory (down)" })
+
+-- <leader>cu - go up to parent directory
+vim.keymap.set("n", "<leader>cu", function()
+  local parent = vim.fn.fnamemodify(vim.fn.getcwd(), ":h")
+  vim.cmd("lcd ..")
+  require("nvim-tree.api").tree.change_root(parent)
+  print("  " .. vim.fn.fnamemodify(vim.fn.getcwd(), ":~"))
+end, { desc = "Change directory (up)" })
+
+-- <leader>cw - show current working directory
+vim.keymap.set("n", "<leader>cw", function()
+  print("  " .. vim.fn.fnamemodify(vim.fn.getcwd(), ":~"))
+end, { desc = "Show current directory" })
+
+-- <leader>cr - reset to directory nvim was opened from
+vim.keymap.set("n", "<leader>cr", function()
+  local start_dir = vim.fn.getenv("PWD")
+  if start_dir and start_dir ~= vim.NIL then
+    vim.cmd("lcd " .. vim.fn.fnameescape(start_dir))
+    require("nvim-tree.api").tree.change_root(start_dir)
+    print("  Reset to: " .. vim.fn.fnamemodify(start_dir, ":~"))
+  end
+end, { desc = "Reset to initial directory" })

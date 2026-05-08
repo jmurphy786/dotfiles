@@ -1,0 +1,9 @@
+[preview]
+image_filter = "nearest"
+image_quality = 75
+max_width = 900
+max_height = 800
+
+[[previewer]]
+mime = "image/{avif,heic,jxl,svg+xml}"
+run = "magick"

@@ -71,6 +71,9 @@ return {
         open_file = {
           quit_on_open = false,
           resize_window = false,  -- Don't resize on file open
+          window_picker = {
+            enable = false
+          },
         },
       },
     })
