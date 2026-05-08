@@ -92,16 +92,13 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
   end,
 })
 
-<<<<<<< HEAD
 -- reload all buffers
 vim.opt.autoread = true
 vim.opt.autowriteall = false  -- Don't auto-save
-=======
 
 -- ============================================================
 -- AUTO COMMANDS
 -- ============================================================
->>>>>>> 55ef126 (changes)
 
 -- Force buffer check when regaining focus
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
