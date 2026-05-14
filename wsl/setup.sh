@@ -11,7 +11,6 @@ PACKAGES=(
     neovim
     npm
     yazi
-    gh
     luarocks
     lazydocker
     imagemagick
