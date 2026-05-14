@@ -1,0 +1,36 @@
+
+# ===========================================================================
+# Scripts
+# ===========================================================================
+
+daily() {
+  NOTES_DIR="$HOME/Documents/personal/routines"
+  DAILY_DIR="$NOTES_DIR/daily"
+  TODAY=$(date +%Y-%m-%d)
+  DAILY_FILE="$DAILY_DIR/$TODAY.md"
+
+  mkdir -p "$DAILY_DIR"
+
+  if [ ! -f "$DAILY_FILE" ]; then
+    cat > "$DAILY_FILE" << EOF
+# Daily Note - $(date '+%B %d, %Y')
+
+## Work Tasks
+- [ ] 
+
+## Gym Notes
+- []
+
+##
+Personal Notes
+- []
+
+## Links
+- [[$(date -d 'yesterday' +%Y-%m-%d)]] (Yesterday)
+EOF
+  fi
+
+  cd "$DAILY_DIR" && nvim "$DAILY_FILE"
+}
+
+
