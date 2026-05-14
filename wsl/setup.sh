@@ -12,12 +12,11 @@ PACKAGES=(
     npm
     yazi
     luarocks
+    resvg
     lazydocker
     imagemagick
     fzf
     lazygit
-    docker
-    docker-compose
 )
 for package in "${PACKAGES[@]}"; do
     if brew list "$package" &>/dev/null; then
