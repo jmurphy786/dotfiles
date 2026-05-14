@@ -11,11 +11,14 @@ PACKAGES=(
     neovim
     npm
     yazi
+    gh
     luarocks
     lazydocker
     imagemagick
     fzf
     lazygit
+    docker
+    docker-compose
 )
 for package in "${PACKAGES[@]}"; do
     if brew list "$package" &>/dev/null; then
@@ -26,4 +29,7 @@ for package in "${PACKAGES[@]}"; do
     fi
 done
 
-
+# Install DevPod CLI
+curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64"
+sudo mv devpod /usr/local/bin/devpod
+sudo chmod +x /usr/local/bin/devpod
