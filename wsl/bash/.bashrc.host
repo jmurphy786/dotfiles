@@ -33,4 +33,4 @@ EOF
   cd "$DAILY_DIR" && nvim "$DAILY_FILE"
 }
 
-
+export NVIM_PROFILE=personal
