@@ -8,10 +8,14 @@ echo "?? Installing Homebrew packages..."
 PACKAGES=(
     stow
     zoxide
+    glow
     neovim
     npm
+    btop
     yazi
+    starship
     luarocks
+    ripgrep
     resvg
     lazydocker
     imagemagick
