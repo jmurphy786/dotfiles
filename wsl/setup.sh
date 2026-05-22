@@ -11,6 +11,7 @@ PACKAGES=(
     glow
     neovim
     npm
+    opencode
     btop
     yazi
     starship
