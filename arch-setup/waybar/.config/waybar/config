@@ -40,7 +40,7 @@
         ]
     },
     "custom/arch": {
-         "format": "󰣇",
+         "format": "󰀻",
         "tooltip": false,
          "on-click": "wofi --show drun --allow-images"
     },
@@ -68,7 +68,7 @@
         "on-click": "swaymsg 'scratchpad show'"
     },
     "sway/workspaces": {
-        "all-outputs": true,
+        "all-outputs": false,
         "warp-on-scroll": false,
         "enable-bar-scroll": true,
         "disable-scroll-wraparound": true,
@@ -114,13 +114,13 @@
         "format": "CPU:{usage}%",
         "tooltip": false,
         "interval": 2,
-        "on-click": "kitty -e btop",
+        "on-click": "kitty -e btop"
     },
     "memory":{
         "format": "RAM:{}%",
         "tooltip": false,
         "interval": 2,
-        "on-click": "kitty -e btop",
+        "on-click": "kitty -e btop"
     },
 
     "group/brightvol": {

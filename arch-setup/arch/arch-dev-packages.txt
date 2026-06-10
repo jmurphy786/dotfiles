@@ -1,0 +1,17 @@
+stow
+zoxide
+glow
+neovim
+npm
+opencode
+btop
+yazi
+starship
+luarocks
+ripgrep
+resvg
+lazydocker
+imagemagick
+fzf
+lazygit
+docker

@@ -9,22 +9,24 @@ set $menu wofi --show drun --allow-images
 set $window_switcher ~/.config/scripts/window_switcher.sh
 
 ### OUTPUTS (MONITORS) ###
-output HDMI-A-1 position 0,0
-output DP-2 enable
+output HDMI-A-2 position 0,0
+output DP-5 enable
 
 ### WALLPAPER ###
-output HDMI-A-1 bg ~/assets/a_city_with_a_pyramid_over_it.jpg fill
-output DP-2 bg ~/assets/a_city_with_a_pyramid_over_it.jpg fill
+output HDMI-A-2 bg ~/assets/a_city_with_a_pyramid_over_it.jpg fill
+output DP-5 bg ~/assets/a_city_with_a_pyramid_over_it.jpg fill
 
 ### WORKSPACES ###
-workspace 1 output HDMI-A-1
-workspace 2 output DP-2
-
+workspace 1 output HDMI-A-2
+workspace 2 output DP-5
+xwayland enable
 ### AUTOSTART ###
 exec nm-applet &
 exec blueman-applet &
 exec waybar &
 exec wl-paste --watch cliphist store &
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway DISPLAY
+
 
 ### INPUT ###
 input "*" {
@@ -138,6 +140,7 @@ client.urgent #B05A5A #2C2A24 #DDD5C4 #B05A5A #B05A5A
 for_window [class="nm-connection-editor"] floating enable
 for_window [class="pavucontrol"] floating enable
 for_window [class="blueman-manager"] floating enable, resize set 900 600, move position center
+for_window [app_id="notes"] floating enable, resize set 1400 900, move position center
 
 ### LAYOUT ###
 
