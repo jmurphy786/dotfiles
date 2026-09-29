@@ -120,9 +120,11 @@ dpod() {
     devpod up "$workspace" || { echo "devpod up failed for '$workspace'"; return 1; }
   fi
 
-  devpod ssh "$workspace" \
+  # --send-env copies each variable in by name, so the token stays out of the
+  # process list; --set-env GH_TOKEN=<value> put it in every process's argv.
+  GH_TOKEN="$(gh auth token)" devpod ssh "$workspace" \
     --send-env CLAUDE_CODE_OAUTH_TOKEN \
-    --set-env GH_TOKEN="$(gh auth token)"
+    --send-env GH_TOKEN
 }
 
 # Delete a devpod workspace via fzf

@@ -22,6 +22,7 @@ PACKAGES=(
     imagemagick
     fzf
     lazygit
+    herdr
 )
 for package in "${PACKAGES[@]}"; do
     if brew list "$package" &>/dev/null; then
@@ -36,3 +37,9 @@ done
 curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64"
 sudo mv devpod /usr/local/bin/devpod
 sudo chmod +x /usr/local/bin/devpod
+
+# herdr client config and the host popup scripts (devpod-add, devpod-manage,
+# herdr-up). The containers get their own herdr config from
+# devpod-brew-dotfiles.
+cd "$SCRIPT_DIR"
+stow --target="$HOME" herdr
