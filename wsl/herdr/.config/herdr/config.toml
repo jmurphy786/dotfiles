@@ -79,11 +79,13 @@ description = "devpod: bring machines back up"
 
 # Spaces sidebar. Worktrees stay grouped under their repo's row; $jm_mark
 # flags them as its branches, and $jm_stack is the gh-stack layer index --
-# both published by jm.portals-bootstrap on the server, styled here.
+# both published by jm.portals-bootstrap on the server, styled here. $jm_ports
+# (":5173 :3000", listening dev servers) leads the second row: the sidebar is
+# narrow and a long branch name would push it off the end.
 [ui.sidebar.spaces]
 rows = [
   ["state_icon", { token = "$jm_mark", fg = "#89b4fa" }, "workspace"],
-  ["branch", "git_status", { token = "$jm_stack", fg = "#89b4fa" }, { token = "$jm_ports", fg = "#f9e2af" }],
+  [{ token = "$jm_ports", fg = "#f9e2af", bold = true }, "branch", "git_status", { token = "$jm_stack", fg = "#89b4fa" }],
 ]
 
 # The host is a server too, for its Local workspaces: bring their claude
