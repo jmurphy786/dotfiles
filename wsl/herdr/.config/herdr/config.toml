@@ -83,7 +83,7 @@ description = "devpod: bring machines back up"
 [ui.sidebar.spaces]
 rows = [
   ["state_icon", { token = "$jm_mark", fg = "#89b4fa" }, "workspace"],
-  ["branch", "git_status", { token = "$jm_stack", fg = "#89b4fa" }],
+  ["branch", "git_status", { token = "$jm_stack", fg = "#89b4fa" }, { token = "$jm_ports", fg = "#f9e2af" }],
 ]
 
 # The host is a server too, for its Local workspaces: bring their claude
