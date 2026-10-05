@@ -11,18 +11,15 @@
 # claude integration is installed in that container.
 set -uo pipefail
 
-case ":$PATH:" in
-  *:/home/linuxbrew/.linuxbrew/bin:*) ;;
-  *) PATH="/home/linuxbrew/.linuxbrew/bin:$PATH" ;;
-esac
-HERDR="${HERDR_BIN_PATH:-herdr}"
+# shellcheck source=lib.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib.sh"
 
 # herdr sits in linuxbrew where setup.sh installed it, or in ~/.local/bin
 # where `herdr machine add` put it. SSH's non-login shell has neither on PATH.
-REMOTE_PATH='PATH="$HOME/.local/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"'
+REMOTE_PATH="$HERDR_REMOTE_PATH"
 
-command -v devpod >/dev/null 2>&1 \
-  || { echo "No devpod here -- run this on the host, with Local selected."; exit 1; }
+need herdr devpod ssh awk \
+  || { echo "Run this on the host, with Local selected."; exit 1; }
 
 # id <TAB> label <TAB> ssh target <TAB> remote session <TAB> enabled|disabled
 machines=$("$HERDR" machine list 2>/dev/null | awk -F'\t' 'NF >= 5 && $5 == "enabled"')

@@ -11,22 +11,11 @@
 # prefix+shift+m brings it back as it was.
 set -uo pipefail
 
-case ":$PATH:" in
-  *:/home/linuxbrew/.linuxbrew/bin:*) ;;
-  *) PATH="/home/linuxbrew/.linuxbrew/bin:$PATH" ;;
-esac
-HERDR="${HERDR_BIN_PATH:-herdr}"
+# shellcheck source=lib.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib.sh"
 
-hold() {
-  [ -n "${1:-}" ] && printf '%s\n' "$1"
-  printf '\n[any key to close] '
-  read -rsn1 _ 2>/dev/null || true
-  echo
-}
-die() { printf '%s\n' "$*" >&2; hold ""; exit 1; }
-
-command -v devpod >/dev/null 2>&1 \
-  || die "No devpod here. Select the Local machine in the sidebar and run this again."
+need herdr devpod fzf awk \
+  || die "Missing tools above. Select the Local machine in the sidebar and run this again."
 
 # id <TAB> label <TAB> ssh target <TAB> remote session <TAB> enabled|disabled
 machines=$("$HERDR" machine list 2>/dev/null | awk -F'\t' 'NF >= 5')

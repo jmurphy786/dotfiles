@@ -9,22 +9,11 @@
 # session.json, so this runs once per container, not per session.
 set -uo pipefail
 
-case ":$PATH:" in
-  *:/home/linuxbrew/.linuxbrew/bin:*) ;;
-  *) PATH="/home/linuxbrew/.linuxbrew/bin:$PATH" ;;
-esac
-HERDR="${HERDR_BIN_PATH:-herdr}"
+# shellcheck source=lib.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib.sh"
 
-hold() {
-  [ -n "${1:-}" ] && printf '%s\n' "$1"
-  printf '\n[any key to close] '
-  read -rsn1 _ 2>/dev/null || true
-  echo
-}
-die() { printf '%s\n' "$*" >&2; hold ""; exit 1; }
-
-command -v devpod >/dev/null 2>&1 \
-  || die "No devpod here. Select the Local machine in the sidebar and run this again."
+need herdr devpod ssh fzf column awk \
+  || die "Missing tools above. Select the Local machine in the sidebar and run this again."
 [ -f "$HOME/.ssh/config" ] || die "No ~/.ssh/config -- has devpod created any workspaces?"
 
 # host <TAB> workdir (or "-") for every DevPod entry. --workdir is only in the
@@ -41,7 +30,7 @@ entries=$(awk '
 
 # Hide the ones that are already machines. The JSON shape is not documented,
 # so look for the host as any quoted string in it rather than at a fixed path
-# -- and without jq, which the host does not have.
+# -- and without jq, so this runs where it is not installed.
 saved=$("$HERDR" machine list --json 2>/dev/null | tr -d '\n')
 rows=$(printf '%s\n' "$entries" | awk -F'\t' -v saved="$saved" '
   index(saved, "\"" $1 "\"") == 0 { printf "%s\t%s\n", $1, $2 }

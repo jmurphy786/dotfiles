@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Behind the WezTerm keys in .wezterm.lua (Windows side).
+# Behind the terminal keys: WezTerm (wsl/wezterm/.wezterm.lua) and kitty
+# (omarchy/kitty/.config/kitty/kitty.conf).
 #
 #   herdr-notes.sh notes          ctrl+shift+n: in the host's default herdr (the
 #                                 Local machine), a notes workspace created or
 #                                 focused with nvim open on
-#                                 ~/obsidian-vault/main.md, then attach as the
+#                                 <vault>/main.md, then attach as the
 #                                 `local` tab does. If its tab already has nvim
 #                                 running in the vault it is left as is; a
 #                                 shell prompt is sent to the vault to start
@@ -37,20 +38,22 @@
 # plugin_action keys (ctrl+h/j/k/l navigator, prefix+w worktree menu, gh stack)
 # were bound to nothing in these tabs. `server` uses the container's own keys,
 # the same ones the multi-machine herdr gets.
+#
+# One more mode:
+#   herdr-notes.sh machines       print `label<TAB>target` for each enabled saved
+#                                 machine, for terminal configs to build tabs
+#                                 from
+#
+# Portable: no WSL, brew or terminal assumptions (see lib.sh). The obsidian
+# vault is looked for in $OBSIDIAN_VAULT, ~/obsidian-vault and
+# ~/Documents/obsidian-vault; without one, `notes` opens the local tab as
+# `local` does and `ensure` does nothing.
 set -euo pipefail
 
-export XDG_STATE_HOME="$HOME/.local/state-notes"
-mkdir -p "$XDG_STATE_HOME"
+# shellcheck source=lib.sh
+. "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib.sh"
 
-case ":$PATH:" in
-  *:/home/linuxbrew/.linuxbrew/bin:*) ;;
-  *) PATH="/home/linuxbrew/.linuxbrew/bin:$PATH" ;;
-esac
-HERDR="${HERDR_BIN_PATH:-herdr}"
 LABEL=notes
-VAULT="$HOME/obsidian-vault"
-# ~/obsidian-vault is a symlink into /mnt/c, and herdr reports resolved paths.
-VAULT_REAL=$(readlink -f "$VAULT")
 
 # Run from inside a herdr pane, the inherited HERDR_* variables would point
 # every call at that pane's server.
@@ -60,12 +63,41 @@ h() { "$HERDR" "$@"; }
 
 mode="${1:-notes}"
 
+need herdr || exit 1
+
+if [ "$mode" = machines ]; then
+  # The shared state: the saved machines live there, not in state-notes.
+  h machine list 2>/dev/null | awk -F'\t' 'NF >= 5 && $5 == "enabled" { print $2 "\t" $3 }'
+  exit 0
+fi
+
+# Every other mode runs a client with its own empty state (see above).
+export XDG_STATE_HOME="$HOME/.local/state-notes"
+mkdir -p "$XDG_STATE_HOME"
+
 if [ "$mode" = remote ]; then
   [ -n "${2:-}" ] || { echo "usage: $0 remote <ssh-target>" >&2; exit 1; }
   exec "$HERDR" --remote "$2" --remote-keybindings server
 fi
 
+if [ "$mode" = notes ] || [ "$mode" = ensure ]; then
+  if VAULT=$(find_vault) && need jq; then
+    # herdr reports resolved paths, and the vault may be a symlink (on WSL, one
+    # into /mnt/c).
+    VAULT_REAL=$(readlink -f "$VAULT")
+  else
+    [ "$mode" = ensure ] && exit 0
+    echo "herdr-notes: no vault (or no jq) -- opening the local tab instead" >&2
+    mode=local
+  fi
+fi
+
 if [ "$mode" = local ] || [ "$mode" = ensure-local ]; then
+  # Without jq the workspace cannot be looked up: just attach.
+  if ! command -v jq >/dev/null 2>&1; then
+    [ "$mode" = ensure-local ] && exit 0
+    exec "$HERDR"
+  fi
   # The default session. The HERDR_* variables are unset above, so this is the
   # host's own server, and the separate XDG_STATE_HOME leaves it no saved
   # machines to switch to. Focus its "linux" workspace, creating it if missing.
@@ -82,7 +114,7 @@ fi
 
 case "$mode" in
   notes | ensure) ;;
-  *) echo "usage: $0 [notes|ensure|local|ensure-local|remote <ssh-target>]" >&2; exit 1 ;;
+  *) echo "usage: $0 [notes|ensure|local|ensure-local|machines|remote <ssh-target>]" >&2; exit 1 ;;
 esac
 
 notes_id() {

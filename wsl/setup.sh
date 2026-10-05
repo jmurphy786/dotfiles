@@ -40,10 +40,24 @@ sudo mv devpod /usr/local/bin/devpod
 sudo chmod +x /usr/local/bin/devpod
 
 # herdr client config and the host popup scripts (devpod-add, devpod-manage,
-# herdr-up). The containers get their own herdr config from
+# herdr-up, herdr-notes). The package is shared with omarchy/, so it lives at
+# the repo root. The containers get their own herdr config from
 # devpod-brew-dotfiles.
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/.."
 stow --target="$HOME" herdr
+cd "$SCRIPT_DIR"
+
+# WezTerm runs on Windows, which stow cannot link into: copy its config to the
+# Windows home (re-run this after editing wsl/wezterm/.wezterm.lua).
+if command -v wslpath >/dev/null 2>&1 && command -v cmd.exe >/dev/null 2>&1; then
+    win_home="$(wslpath "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')")"
+    if [ -d "$win_home" ]; then
+        [ -f "$win_home/.wezterm.lua" ] && ! cmp -s wezterm/.wezterm.lua "$win_home/.wezterm.lua" \
+            && cp "$win_home/.wezterm.lua" "$win_home/.wezterm.lua.bak"
+        cp wezterm/.wezterm.lua "$win_home/.wezterm.lua"
+        echo "V copied .wezterm.lua to $win_home"
+    fi
+fi
 
 # nvim-aware ctrl+hjkl pane focus for Local workspaces. The plugin the
 # ctrl+hjkl keys in herdr/config.toml run; it comes from GitHub, not this repo.
