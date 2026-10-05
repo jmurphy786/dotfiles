@@ -4,11 +4,12 @@
 # CORE CONFIGURATION (Always loaded)
 # ============================================================================
 
+
 alias ls='ls --color=auto'
 alias ll='ls -lah'
 alias grep='grep --color=auto'
 bind -x '"\C-g": __fzf_file_widget'
-
+alias nt='cd ~/obsidian-vault && nvim main.md'
 # ============================================================================
 # PATH CONFIGURATION
 # ============================================================================
@@ -20,8 +21,17 @@ export _ZO_DOCTOR=0
 export PATH="$HOME/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
-
+export PATH="$HOME/.local/bin:$PATH"
 command -v zoxide &>/dev/null && eval "$(zoxide init --cmd cd bash)"
+# Define a fixed path for the socket
+export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+
+# ssh-add -l exits 2 when no agent answers (e.g. a stale socket file is left over)
+ssh-add -l >/dev/null 2>&1
+if [ $? -eq 2 ]; then
+  rm -f "$SSH_AUTH_SOCK"
+  ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null 2>&1
+fi
 
 # ===========================================================================
 # Scripts
@@ -120,11 +130,9 @@ dpod() {
     devpod up "$workspace" || { echo "devpod up failed for '$workspace'"; return 1; }
   fi
 
-  # --send-env copies each variable in by name, so the token stays out of the
+  # --send-env copies the variable in by name, so the token stays out of the
   # process list; --set-env GH_TOKEN=<value> put it in every process's argv.
-  GH_TOKEN="$(gh auth token)" devpod ssh "$workspace" \
-    --send-env CLAUDE_CODE_OAUTH_TOKEN \
-    --send-env GH_TOKEN
+  GH_TOKEN="$(gh auth token)" devpod ssh "$workspace" --send-env GH_TOKEN
 }
 
 # Delete a devpod workspace via fzf
@@ -140,7 +148,6 @@ function dpod-rm() {
 eval "$(starship init bash)"
 export TERM=xterm-256color
 
-[ -f ~/.secrets ] && source ~/.secrets
 [ -f ~/.bashrc.host ] && source ~/.bashrc.host
 
 
