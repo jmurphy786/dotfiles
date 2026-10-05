@@ -3,21 +3,30 @@ onboarding = false
 # Host (client) half of the herdr setup. The client applies [theme], [ui] and
 # [keys] to every machine it shows, so the keybindings live here. Each
 # devcontainer runs a herdr server with its own config.toml from
-# devpod-brew-dotfiles, which covers [worktrees], [session] and
-# [experimental] for panes running there and holds the jm.portals-bootstrap
-# plugin that the plugin_action keys below resolve to -- so those keys run
-# inside whichever container's workspace is selected.
+# devpod-brew-dotfiles, which covers [worktrees], [session] and [experimental]
+# for panes running there. It also holds the jm.portals-bootstrap plugin AND
+# the [[keys.command]] plugin_action keys that run it (prefix+w worktree menu,
+# prefix+shift+s gh stack): custom commands are server-side config, and the
+# client does not forward a keys.command it doesn't have itself, so they cannot
+# live here.
 [theme]
-name = "rose-pine"
+name = "solarized"
 auto_switch = false
+
+# herdr.dev hero look: Catppuccin Mocha with a mauve accent instead of blue
+[theme.custom]
+accent = "#cba6f7"
 
 [keys]
 prefix = "ctrl+b"
 
-focus_pane_left = "ctrl+h"
-focus_pane_down = "ctrl+j"
-focus_pane_up = "ctrl+k"
-focus_pane_right = "ctrl+l"
+# Pane focus is on alt+h/j/k/l. ctrl+h/j/k/l are plugin_action keys (see the
+# [[keys.command]] entries below) that pass the key to nvim when it is in the
+# foreground; a built-in on them would swallow the key before nvim sees it.
+focus_pane_left = "alt+h"
+focus_pane_down = "alt+j"
+focus_pane_up = "alt+k"
+focus_pane_right = "alt+l"
 
 split_vertical = "prefix+%"
 split_horizontal = "prefix+,"
@@ -26,31 +35,94 @@ new_tab = "prefix+c"
 
 toggle_sidebar = "prefix+p"
 
-# Built-in worktree handling, bound. workspace_picker (prefix+w) and
-# close_workspace (prefix+shift+d) keep their defaults. remove_worktree only
-# deletes the checkout -- the branch stays, like `workmux remove -k`.
-open_worktree = "prefix+g"
+# Worktrees. herdr's built-in New/Open worktree only run from the parent repo
+# and error from a linked worktree, so prefix+w is the plugin's worktree menu
+# instead, bound in each container's server config (see above). remove_worktree
+# acts on the selected child itself, so the built-in is fine and keeps
+# prefix+d; it only deletes the checkout, the branch stays.
 remove_worktree = "prefix+d"
 
-# The built-in dialog puts checkouts under worktrees.directory, outside the
-# bind-mounted repo, where a rebuild loses them and workmux cannot see them.
-# prefix+shift+g below replaces it.
-new_worktree = ""
+# A built-in wins a key clash and the keys.command on it is disabled, so the
+# defaults on prefix+g (goto) and prefix+shift+g (new_worktree) are moved.
+# goto -- the client's agent/terminal picker, the one that can switch machines --
+# takes prefix+shift+g; new_worktree is parked on a chord nothing uses. The
+# containers set the same two in their own config. open_worktree is unset by
+# default and stays that way.
+goto = "prefix+shift+g"
+new_worktree = "prefix+alt+g"
 
-# Worktree from a local branch, a remote-only branch, an open PR, or a typed
-# new name, checked out under <repo>/.worktrees/<slug> like workmux does.
-[[keys.command]]
-key = "prefix+shift+g"
-type = "plugin_action"
-command = "jm.portals-bootstrap.wt-add-open"
-description = "worktree: new from branch / remote / PR"
+# Switching machines is client state that no plugin, popup or CLI call can move
+# (`herdr --machine X workspace focus` changes the server's focus, not the
+# client's view). The built-in workspace navigator already spans every
+# connected machine, so use that. It moves from prefix+w to prefix+h
+# (nvim-style; focus_pane_left is on ctrl+h above) so the worktree menu can
+# take prefix+w. The containers set the same.
+workspace_picker = "prefix+h"
 
-# The prefix+S gh-stack menu, ported off the tmux display-menu.
+# Navigate mode (prefix+h): j/k move the workspace selection, vim-style.
+# j/k were pane focus here by default, so that moves to ctrl+j/k, matching
+# ctrl+h/j/k/l pane focus outside navigate mode. h/l stay pane left/right.
+navigate_workspace_down = ["j", "down"]
+navigate_workspace_up = ["k", "up"]
+navigate_pane_down = "ctrl+j"
+navigate_pane_up = "ctrl+k"
+
+# Workspace cycling without entering navigate mode, down/up like the sidebar.
+# Worktrees are workspaces too, so they are part of the cycle.
+next_workspace = "ctrl+shift+j"
+previous_workspace = "ctrl+shift+k"
+
+# nvim-aware pane focus for Local workspaces (the containers bind the same in
+# their own config). Needs the plugin installed on the host:
+#   herdr plugin install kaar/nvim-herdr-navigator
 [[keys.command]]
-key = "prefix+shift+s"
+key = "ctrl+h"
 type = "plugin_action"
-command = "jm.portals-bootstrap.gh-stack-open"
-description = "gh stack"
+command = "herdr-navigator.left"
+description = "navigate left (nvim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "herdr-navigator.down"
+description = "navigate down (nvim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "herdr-navigator.up"
+description = "navigate up (nvim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "herdr-navigator.right"
+description = "navigate right (nvim/herdr)"
+
+# The chords above shadow ctrl+l (clear screen) in shells; this puts it back.
+[[keys.command]]
+key = "prefix+ctrl+l"
+type = "shell"
+command = "\"$HERDR_BIN_PATH\" pane send-keys \"$HERDR_ACTIVE_PANE_ID\" ctrl+l"
+description = "send ctrl+l (clear screen) to pane"
+
+# lazygit and tuicr popups, in the focused pane's directory. These cover Local
+# workspaces; each container's config has the same two for its own.
+[[keys.command]]
+key = "prefix+g"
+type = "popup"
+command = "lazygit"
+description = "lazygit"
+width = "90%"
+height = "90%"
+
+[[keys.command]]
+key = "prefix+t"
+type = "popup"
+command = "tuicr"
+description = "tuicr review"
+width = "90%"
+height = "90%"
 
 # The popups below are host scripts: run them with Local selected, since a
 # command runs on the selected server and the containers have no devpod.
@@ -95,3 +167,10 @@ resume_agents_on_restore = true
 
 [experimental]
 pane_history = true
+
+[ui.toast]
+delivery = "herdr"
+
+[ui]
+status_indicators = "dots"
+sidebar_collapsed_mode = "hidden"

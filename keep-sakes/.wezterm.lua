@@ -1,420 +1,296 @@
--- WezTerm Keybindings Documentation by dragonlobster
--- ===================================================
--- Leader Key:
--- The leader key is set to CTRL + b, with a timeout of 2000 milliseconds (2 seconds).
--- To execute any keybinding, press the leader key (CTRL + b) first, then the corresponding key.
-
--- Keybindings:
--- 1. Tab Management:
---    - LEADER + c: Create a new tab in the current pane's domain.
---    - LEADER + x: Close the current pane (with confirmation).
---    - LEADER + b: Switch to the previous tab.
---    - LEADER + n: Switch to the next tab.
---    - LEADER + <number>: Switch to a specific tab (0-9).
-
--- 2. Pane Splitting:
---    - LEADER + v: Split the current pane horizontally.
---    - LEADER + s: Split the current pane vertically.
--- 3. Pane Navigation:
---    - LEADER + h: Move to the pane on the left.
---    - LEADER + j: Move to the pane below.
---    - LEADER + k: Move to the pane above.
---    - LEADER + l: Move to the pane on the right.
-
--- 4. Pane Resizing:
---    - LEADER + LeftArrow: Enter resize mode, resize left.
---    - LEADER + RightArrow: Enter resize mode, resize right.
---    - LEADER + DownArrow: Enter resize mode, resize down.
---    - LEADER + UpArrow: Enter resize mode, resize up.
---    - Escape/Enter: Exit resize mode.
-
--- 5. Status Line:
---    - The status line indicates when the leader key is active, displaying an ocean wave emoji.
-
--- Pull in the wezterm API
-
-local wezterm = require "wezterm"
-local act = wezterm.action
+local wezterm = require("wezterm")
 
 local config = {}
 if wezterm.config_builder then
-  config = wezterm.config_builder()
+	config = wezterm.config_builder()
 end
+
+config.enable_tab_bar = false
 config.enable_kitty_graphics = true
-
+-- Report Esc as CSI 27 u instead of a bare 0x1b byte, so herdr doesn't have to
+-- wait out a timeout to tell a lone Esc from the start of an Alt/CSI sequence.
+config.enable_kitty_keyboard = true
+config.bypass_mouse_reporting_modifiers = "SHIFT"
 config.set_environment_variables = {
-  TERM = "wezterm",
+	TERM = "wezterm",
 }
-
---[[
-============================
-Performance
-============================
-]] --
-config.max_fps = 60
-config.animation_fps = 1
 config.cursor_blink_rate = 0
---config.term = "wezterm"
-
---[[
-============================
-Custom Configuration
-============================
-]] --
-local tab_style = "square"
-
--- leader active indicator prefix
-local leader_prefix = utf8.char(0x1f30a) -- ocean wave
-
---[[
-============================
-WSL Domain
-============================
-]] --
-local DEFAULT_DOMAIN = "WSL:dotfiles-test"
--- Remove config.default_prog = { 'wsl.exe' }
--- WslDomain handles this natively and more efficiently
--- The fix - use ConPTY via Windows Terminal
+config.wsl_domains = {
+	{
+		name = "WSL:dotfiles-test", -- match your actual distro name (run `wsl -l -v` to check)
+		distribution = "dotfiles-test",
+		default_cwd = "~",
+		default_prog = { "bash", "-l" },
+	},
+}
 
 config.default_domain = "WSL:dotfiles-test"
-config.wsl_domains = {
-  {
-    name = "WSL:dotfiles-test",
-    distribution = "dotfiles-test",
-    default_cwd = "~",
-  },
-}
 
---[[
-============================
-Font
-============================
-]] --
 
-config.font = wezterm.font("JetBrains Mono")
+config.font = wezterm.font_with_fallback({ "JetBrainsMono Nerd Font", "JetBrains Mono", "Noto Color Emoji" })
 
 config.font_size = 14
-
+-- Zooming changes the row/column count instead of resizing the window, so it
+-- can't grow past the laptop screen.
+config.adjust_window_size_when_changing_font_size = false
 config.window_decorations = "RESIZE"
-config.window_background_opacity = 1
+config.window_background_opacity = 0.90
 
-local bar = wezterm.plugin.require("https://github.com/adriankarlen/bar.wezterm")
-bar.apply_to_config(config)
+--config.color_scheme = "Catppuccin Mocha"
 
----------------------------------------
--- FUNCTIONS
--- -----------------------------------
-
--- near the top, after local mux = wezterm.mux
-local mux = wezterm.mux
-
-local function popup_window(window, pane, cmd)
-  local screens = wezterm.gui.screens()
-  local active = screens.active
-  local sw = active.width
-  local sh = active.height
-
-  local popup_w = math.floor(sw * 0.55)
-  local popup_h = math.floor(sh * 0.45)
-  local popup_x = math.floor((sw - popup_w) / 2)
-  local popup_y = math.floor((sh - popup_h) / 2)
-
-  local full_cmd = 'glazewm.exe command "set-floating" 2>/dev/null'
-  if cmd then
-    full_cmd = full_cmd .. ' && ' .. cmd
-  end
-
-  local tab, popup_pane, popup_win = mux.spawn_window {
-    domain = { DomainName = DEFAULT_DOMAIN },
-    width = math.floor(popup_w / 9),
-    height = math.floor(popup_h / 18),
-    args = { 'bash', '--login', '-c', full_cmd },
-  }
-
-  local gui_popup = popup_win:gui_window()
-  gui_popup:set_position(popup_x, popup_y)
-  gui_popup:focus()
-end
-
-
---[[
-============================
+--[[ ============================
 Colors
 ============================
-]] --
-
-local color_scheme = "Catppuccin Macchiato"
-config.color_scheme = color_scheme
-
-local scheme_colors = {
-  catppuccin = {
-    macchiato = {
-      rosewater = "f4dbd6",
-      flamingo  = "f0c6c6",
-      pink      = "f5bde6",
-      mauve     = "c6a0f6",
-      red       = "ed8796",
-      maroon    = "ee99a0",
-      peach     = "#f5a97f",
-      yellow    = "#eed49f",
-      green     = "#a6da95",
-      teal      = "#8bd5ca",
-      sky       = "#91d7e3",
-      sapphire  = "#7dc4e4",
-      blue      = "#8aadf4",
-      lavender  = "#b7bdf8",
-      text      = "#cad3f5",
-      crust     = "#181926",
-    }
-  }
-}
-
-local colors = {
-  border                  = scheme_colors.catppuccin.macchiato.lavender,
-  tab_bar_active_tab_fg   = scheme_colors.catppuccin.macchiato.mauve,
-  tab_bar_active_tab_bg   = scheme_colors.catppuccin.macchiato.crust,
-  tab_bar_text            = scheme_colors.catppuccin.macchiato.crust,
-  arrow_foreground_leader = scheme_colors.catppuccin.macchiato.lavender,
-  arrow_background_leader = scheme_colors.catppuccin.macchiato.crust,
-}
-
---[[
-============================
-Border
-============================
-]] --
-
-config.window_frame = {
-  border_left_width    = "0cell",
-  border_right_width   = "0cell",
-  border_bottom_height = "0cell",
-  border_top_height    = "0cell",
-  border_left_color    = colors.border,
-  border_right_color   = colors.border,
-  border_bottom_color  = colors.border,
-  border_top_color     = colors.border,
-}
-
+]]
+--
 
 
 --[[
 ============================
 Shortcuts
 ============================
-]] --
+]]
+--
 
-config.leader = {
-  key = "Space",
-  mods = "CTRL",
+-- One tab per herdr machine view, found by title and created on first use:
+--   ctrl+shift+r      "all": the normal multi-machine herdr
+--   ctrl+shift+1..9   one tab per entry in `machines` below (1-3 DevPod, 4 local)
+--   ctrl+shift+n      the local tab, on its notes workspace (Obsidian vault, nvim),
+--                     created/focused by `ensure` in the background
+-- Each per-machine tab runs a herdr client that knows only that machine, which
+-- is what stops it snapping to another one. See wsl/herdr/.config/herdr/scripts/herdr-notes.sh.
+local DOMAIN = "WSL:dotfiles-test"
+local HERDR_TAB = "~/.config/herdr/scripts/herdr-notes.sh"
+local machines = {
+	{ title = "backend", cmd = HERDR_TAB .. " remote portalsv2-microservices.devpod" },
+	{ title = "mobile", cmd = HERDR_TAB .. " remote portalsv2-practitioner-mobile-app.devpod" },
+	{ title = "web", cmd = HERDR_TAB .. " remote portalsv2-frontend-web-apps.devpod" },
+	{ title = "local", cmd = HERDR_TAB .. " local", ensure = HERDR_TAB .. " ensure-local" },
 }
+
+local function find_tab(mux_window, title)
+	for _, tab in ipairs(mux_window:tabs()) do
+		if tab:get_title() == title then
+			return tab
+		end
+	end
+end
+
+local function goto_tab(window, title, cmd)
+	local mux_window = window:mux_window()
+	local tab = find_tab(mux_window, title)
+	if tab then
+		tab:activate()
+		return
+	end
+	tab = mux_window:spawn_tab({
+		domain = { DomainName = DOMAIN },
+		args = { "bash", "-lc", cmd .. "; exec bash -l" },
+	})
+	tab:set_title(title)
+end
 
 config.keys = {
-  {
-    mods = "LEADER",
-    key = "x",
-    action = act.CloseCurrentPane { confirm = false }
-  },
-  {
-    mods = "CTRL",
-    key = "w",
-    action = act.CloseCurrentTab{ confirm = false }
-  },
-  {
-    key = 'n',
-    mods = 'LEADER',
-    action = wezterm.action_callback(function(window, pane)
-      popup_window(window, pane, 'cd ~/personal/notes && nvim main.md')
-    end),
-  },
-  {
-    key = 'm',
-    mods = 'LEADER',
-    action = wezterm.action_callback(function(window, pane)
-      popup_window(window, pane, 'cd ~/work-notes && nvim main.md')
-    end),
-  },
-  {
-    key = 'w',
-    mods = 'LEADER',
-    action = act.PromptInputLine {
-      description = 'Enter new workspace name',
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:perform_action(act.SwitchToWorkspace { name = line }, pane)
-        end
-      end),
-    },
-  },
-  {
-    key = '/',
-    mods = 'CTRL',
-    action = act.ShowLauncherArgs { flags = 'WORKSPACES' },
-  },
-  {
-    mods = "LEADER",
-    key = "s",
-    action = act.SplitHorizontal { domain = "CurrentPaneDomain" },
-  },
-  {
-    mods = "LEADER",
-    key = "v",
-    action = act.SplitVertical { domain = "CurrentPaneDomain" },
-  },
-  {
-    mods = "LEADER",
-    key = "R",
-    action = act.PromptInputLine {
-      description = "Enter new workspace name",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          wezterm.mux.rename_workspace(window:active_workspace(), line)
-        end
-      end),
-    },
-  },
-  {
-    mods = "CTRL",
-    key = "t",
-    action = act.SpawnTab "CurrentPaneDomain",
-  },
-  { key = 'h', mods = 'LEADER', action = act.ActivatePaneDirection('Left') },
-  { key = 'j', mods = 'LEADER', action = act.ActivatePaneDirection('Down') },
-  { key = 'k', mods = 'LEADER', action = act.ActivatePaneDirection('Up') },
-  { key = 'l', mods = 'LEADER', action = act.ActivatePaneDirection('Right') },
-  {
-    mods = "LEADER",
-    key = "r",
-    action = act.PromptInputLine {
-      description = "Enter new tab name",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:active_tab():set_title(line)
-        end
-      end),
-    },
-  },
-  {
-    mods = "LEADER",
-    key = "d",
-    action = wezterm.action_callback(function(window, pane)
-      local mux_win = window:mux_window()
-      window:perform_action(act.SwitchWorkspaceRelative(-1), pane)
-      for _, tab in ipairs(mux_win:tabs()) do
-        tab:activate()
-        window:perform_action(act.CloseCurrentTab { confirm = false }, pane)
-      end
-    end),
-  },
-  -- Resize mode - press LEADER + arrow to enter, keep pressing to resize
-  {
-    mods = "LEADER",
-    key = "LeftArrow",
-    action = act.Multiple {
-      act.AdjustPaneSize { "Left", 5 },
-      act.ActivateKeyTable { name = "resize_pane", one_shot = false },
-    }
-  },
-  {
-    mods = "LEADER",
-    key = "RightArrow",
-    action = act.Multiple {
-      act.AdjustPaneSize { "Right", 5 },
-      act.ActivateKeyTable { name = "resize_pane", one_shot = false },
-    }
-  },
-  {
-    mods = "LEADER",
-    key = "DownArrow",
-    action = act.Multiple {
-      act.AdjustPaneSize { "Down", 5 },
-      act.ActivateKeyTable { name = "resize_pane", one_shot = false },
-    }
-  },
-  {
-    mods = "LEADER",
-    key = "UpArrow",
-    action = act.Multiple {
-      act.AdjustPaneSize { "Up", 5 },
-      act.ActivateKeyTable { name = "resize_pane", one_shot = false },
-    }
-  },
+	{
+		key = "R",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			goto_tab(window, "all", "herdr")
+		end),
+	},
+	{
+		key = "N",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			if find_tab(window:mux_window(), "local") then
+				-- Local tab already open: show it now and set the notes workspace
+				-- up in the background, so the key never waits on herdr.
+				wezterm.background_child_process({
+					"wsl.exe", "-d", "dotfiles-test", "--", "bash", "-lc", HERDR_TAB .. " ensure",
+				})
+				goto_tab(window, "local", "")
+			else
+				goto_tab(window, "local", HERDR_TAB .. " notes")
+			end
+		end),
+	},
+	{ key = "UpArrow", mods = "CTRL|SHIFT", action = wezterm.action.IncreaseFontSize },
+	{ key = "DownArrow", mods = "CTRL|SHIFT", action = wezterm.action.DecreaseFontSize },
+	-- WezTerm's default ctrl+shift+k is ClearScrollback; herdr uses it for previous_workspace.
+	{ key = "K", mods = "CTRL|SHIFT", action = wezterm.action.DisableDefaultAssignment },
 }
 
-config.key_tables = {
-  resize_pane = {
-    { key = "LeftArrow",  action = act.AdjustPaneSize { "Left", 5 } },
-    { key = "RightArrow", action = act.AdjustPaneSize { "Right", 5 } },
-    { key = "DownArrow",  action = act.AdjustPaneSize { "Down", 5 } },
-    { key = "UpArrow",    action = act.AdjustPaneSize { "Up", 5 } },
-    { key = "Escape",     action = act.PopKeyTable },
-    { key = "Enter",      action = act.PopKeyTable },
-  },
-}
-
-for i = 1, 9 do
-  table.insert(config.keys, {
-    key = tostring(i),
-    mods = "LEADER",
-    action = act.ActivateTab(i - 1),
-  })
+for i, m in ipairs(machines) do
+	table.insert(config.keys, {
+		-- phys: so it works whatever the keyboard layout does to shift+digit
+		key = "phys:" .. i,
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			if m.ensure and find_tab(window:mux_window(), m.title) then
+				-- Tab already open: focus its workspace in the background.
+				wezterm.background_child_process({
+					"wsl.exe", "-d", "dotfiles-test", "--", "bash", "-lc", m.ensure,
+				})
+			end
+			goto_tab(window, m.title, m.cmd)
+		end),
+	})
 end
 
---[[
-============================
-Tab Bar
-============================
-]] --
+-- Start with the "all" tab so ctrl+shift+r finds it instead of making a second.
+wezterm.on("gui-startup", function(cmd)
+	local tab = wezterm.mux.spawn_window({
+		domain = { DomainName = DOMAIN },
+		args = { "bash", "-lc", "herdr; exec bash -l" },
+	})
+	tab:set_title("all")
+end)
 
-config.hide_tab_bar_if_only_one_tab = false
-config.tab_bar_at_bottom = true
-config.use_fancy_tab_bar = false
-config.tab_and_split_indices_are_zero_based = false
-
-local function tab_title(tab_info)
-  local title = tab_info.tab_title
-  if title and #title > 0 then return title end
-  return tab_info.active_pane.title
-end
-
-wezterm.on(
-  "format-tab-title",
-  function(tab, tabs, panes, config, hover, max_width)
-    local index = tab.tab_index + 1
-    local title = " " .. index .. ": " .. tab_title(tab) .. " "
-    local left_edge_text = ""
-    local right_edge_text = ""
-
-    if tab_style == "rounded" then
-      title = tab.tab_index .. ": " .. tab_title(tab)
-      title = wezterm.truncate_right(title, max_width - 2)
-      left_edge_text = wezterm.nerdfonts.ple_left_half_circle_thick
-      right_edge_text = wezterm.nerdfonts.ple_right_half_circle_thick
-    end
-
-    if tab.is_active then
-      return {
-        { Background = { Color = colors.tab_bar_active_tab_bg } },
-        { Foreground = { Color = colors.tab_bar_active_tab_fg } },
-        { Text = left_edge_text },
-        { Background = { Color = colors.tab_bar_active_tab_fg } },
-        { Foreground = { Color = colors.tab_bar_text } },
-        { Text = title },
-        { Background = { Color = colors.tab_bar_active_tab_bg } },
-        { Foreground = { Color = colors.tab_bar_active_tab_fg } },
-        { Text = right_edge_text },
-      }
-    else
-      return {
-        { Text = title },
-      }
-    end
-  end
-)
+-- config.leader = {
+-- 	key = "Space",
+-- 	mods = "CTRL",
+-- }
+--
+-- config.keys = {
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "x",
+-- 		action = act.CloseCurrentPane({ confirm = false }),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "w",
+-- 		action = act.CloseCurrentTab({ confirm = false }),
+-- 	},
+-- 	{
+-- 		key = "n",
+-- 		mods = "LEADER",
+-- 		action = wezterm.action_callback(function(window, pane)
+-- 			popup_window(window, pane, "cd ~/obsidian-vault && nvim main.md")
+-- 	end),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "s",
+-- 		action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "v",
+-- 		action = act.SplitVertical({ domain = "CurrentPaneDomain" }),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "R",
+-- 		action = act.PromptInputLine({
+-- 			description = "Enter new workspace name",
+-- 			action = wezterm.action_callback(function(window, pane, line)
+-- 				if line then
+-- 					wezterm.mux.rename_workspace(window:active_workspace(), line)
+-- 				end
+-- 			end),
+-- 		}),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "t",
+-- 		action = act.SpawnTab("CurrentPaneDomain"),
+-- 	},
+-- 	{ key = "h", mods = "LEADER", action = act.ActivatePaneDirection("Left") },
+-- 	{ key = "j", mods = "LEADER", action = act.ActivatePaneDirection("Down") },
+-- 	{ key = "k", mods = "LEADER", action = act.ActivatePaneDirection("Up") },
+-- 	{ key = "l", mods = "LEADER", action = act.ActivatePaneDirection("Right") },
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "r",
+-- 		action = act.PromptInputLine({
+-- 			description = "Enter new tab name",
+-- 			action = wezterm.action_callback(function(window, pane, line)
+-- 				if line then
+-- 					window:active_tab():set_title(line)
+-- 				end
+-- 			end),
+-- 		}),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "d",
+-- 		action = wezterm.action_callback(function(window, pane)
+-- 			local mux_win = window:mux_window()
+-- 			window:perform_action(act.SwitchWorkspaceRelative(-1), pane)
+-- 			for _, tab in ipairs(mux_win:tabs()) do
+-- 				tab:activate()
+-- 				window:perform_action(act.CloseCurrentTab({ confirm = false }), pane)
+-- 			end
+-- 		end),
+-- 	},
+-- 	-- Resize mode - press LEADER + arrow to enter, keep pressing to resize
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "LeftArrow",
+-- 		action = act.Multiple({
+-- 			act.AdjustPaneSize({ "Left", 5 }),
+-- 			act.ActivateKeyTable({ name = "resize_pane", one_shot = false }),
+-- 		}),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "RightArrow",
+-- 		action = act.Multiple({
+-- 			act.AdjustPaneSize({ "Right", 5 }),
+-- 			act.ActivateKeyTable({ name = "resize_pane", one_shot = false }),
+-- 		}),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "DownArrow",
+-- 		action = act.Multiple({
+-- 			act.AdjustPaneSize({ "Down", 5 }),
+-- 			act.ActivateKeyTable({ name = "resize_pane", one_shot = false }),
+-- 		}),
+-- 	},
+-- 	{
+-- 		mods = "LEADER",
+-- 		key = "UpArrow",
+-- 		action = act.Multiple({
+-- 			act.AdjustPaneSize({ "Up", 5 }),
+-- 			act.ActivateKeyTable({ name = "resize_pane", one_shot = false }),
+-- 		}),
+-- 	},
+-- }
+--
+-- config.key_tables = {
+-- 	resize_pane = {
+-- 		{ key = "LeftArrow", action = act.AdjustPaneSize({ "Left", 5 }) },
+-- 		{ key = "RightArrow", action = act.AdjustPaneSize({ "Right", 5 }) },
+-- 		{ key = "DownArrow", action = act.AdjustPaneSize({ "Down", 5 }) },
+-- 		{ key = "UpArrow", action = act.AdjustPaneSize({ "Up", 5 }) },
+-- 		{ key = "Escape", action = act.PopKeyTable },
+-- 		{ key = "Enter", action = act.PopKeyTable },
+-- 	},
+-- }
+--
+-- for i = 1, 9 do
+-- 	table.insert(config.keys, {
+-- 		key = tostring(i),
+-- 		mods = "LEADER",
+-- 		action = act.ActivateTab(i - 1),
+-- 	})
+-- end
+--
+-- --[[
+-- local function tab_title(tab_info)
+--   local title = tab_info.tab_title
+--   if title and #title > 0 then return title end
+--   return tab_info.active_pane.title
+-- end
+--
 --[[
 ============================
 Leader Active Indicator
 ============================
-]] --
+]]
+--
 
 return config
 

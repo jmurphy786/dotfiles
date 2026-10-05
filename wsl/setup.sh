@@ -23,6 +23,7 @@ PACKAGES=(
     fzf
     lazygit
     herdr
+    jq
 )
 for package in "${PACKAGES[@]}"; do
     if brew list "$package" &>/dev/null; then
@@ -43,3 +44,7 @@ sudo chmod +x /usr/local/bin/devpod
 # devpod-brew-dotfiles.
 cd "$SCRIPT_DIR"
 stow --target="$HOME" herdr
+
+# nvim-aware ctrl+hjkl pane focus for Local workspaces. The plugin the
+# ctrl+hjkl keys in herdr/config.toml run; it comes from GitHub, not this repo.
+herdr plugin install kaar/nvim-herdr-navigator || true

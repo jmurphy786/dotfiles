@@ -45,6 +45,20 @@ while IFS=$'\t' read -r id label target session _status; do
     fi
   fi
 
+  # tuicr and gh-stack run in the container and need gh auth, but herdr
+  # reaches it over plain ssh, so the env-var token `dpod` sends never gets
+  # here. Persist the host login once instead. The token rides ssh stdin, so
+  # it stays out of argv. (No </dev/null here: stdin is the token.)
+  if [ -n "$ws" ] && ! ssh -o BatchMode=yes -o ConnectTimeout=30 "$target" \
+       "$REMOTE_PATH; gh auth status" >/dev/null 2>&1 </dev/null; then
+    if gh auth token 2>/dev/null | ssh -o BatchMode=yes -o ConnectTimeout=30 "$target" \
+         "$REMOTE_PATH; gh auth login --with-token" >/dev/null 2>&1; then
+      echo "   gh authenticated"
+    else
+      echo "   gh auth failed (is gh installed in the container?)"
+    fi
+  fi
+
   # </dev/null on every ssh: it would otherwise swallow the rest of the
   # machine list this loop is reading.
   if ssh -o BatchMode=yes -o ConnectTimeout=30 "$target" \
