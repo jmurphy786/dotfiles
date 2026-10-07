@@ -1,4 +1,5 @@
-# ~/.bashrc
+# ~/.bashrc.shared -- sourced from ~/.bashrc by the hook stow-lib.sh appends.
+# Shared by wsl and omarchy; per-machine bits go in ~/.bashrc.host.
 
 # ============================================================================
 # CORE CONFIGURATION (Always loaded)
@@ -16,7 +17,7 @@ alias nt='cd ~/obsidian-vault && nvim main.md'
 
 #PROMPT_COMMAND=""
 # Add Homebrew to PATH
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 export _ZO_DOCTOR=0
 export PATH="$HOME/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"

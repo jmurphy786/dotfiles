@@ -14,7 +14,8 @@ if ! command -v devpod >/dev/null 2>&1; then
     rm -f devpod
 fi
 
-# Shared packages (herdr, git, lazygit; listed in stow-lib.sh), then the kitty config
+# Shared packages (listed in stow-lib.sh; the shared bashrc is appended to the
+# distro ~/.bashrc, not replacing it), then the kitty config
 . "$SCRIPT_DIR/../stow-lib.sh"
 stow_shared
 stow_packages "$SCRIPT_DIR" kitty
