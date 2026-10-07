@@ -40,17 +40,17 @@ sudo mv devpod /usr/local/bin/devpod
 sudo chmod +x /usr/local/bin/devpod
 
 # Packages shared with omarchy/ live at the repo root and are listed in
-# stow-lib.sh (herdr client config + host popup scripts, lazygit, git colours, the
+# shared-setup.sh (herdr client config + host popup scripts, lazygit, git colours, the
 # shared .bashrc hooked into ~/.bashrc).
 # The containers get their own herdr config from devpod-brew-dotfiles.
-. "$SCRIPT_DIR/../stow-lib.sh"
+. "$SCRIPT_DIR/../shared-setup.sh"
 stow_shared
 
 # Host-only bashrc bits (~/.bashrc.host), then WezTerm (copied to the Windows
-# home; see install_wezterm in stow-lib.sh).
+# home; see install_wezterm in shared-setup.sh).
 stow_packages "$SCRIPT_DIR" bash
 install_wezterm
 
-# nvim-aware ctrl+hjkl pane focus for Local workspaces. The plugin the
-# ctrl+hjkl keys in herdr/config.toml run; it comes from GitHub, not this repo.
-herdr plugin install kaar/nvim-herdr-navigator || true
+# herdr plugins (HERDR_PLUGINS in shared-setup.sh): nvim-aware ctrl+hjkl pane focus
+# for the ctrl+hjkl keys in herdr/config.toml, plus the claude resume integration.
+install_herdr_plugins

@@ -14,11 +14,10 @@ if ! command -v devpod >/dev/null 2>&1; then
     rm -f devpod
 fi
 
-# Shared packages (listed in stow-lib.sh; the shared bashrc is appended to the
+# Shared packages (listed in shared-setup.sh; the shared bashrc is appended to the
 # distro ~/.bashrc, not replacing it), then the kitty config
-. "$SCRIPT_DIR/../stow-lib.sh"
+. "$SCRIPT_DIR/../shared-setup.sh"
 stow_shared
 stow_packages "$SCRIPT_DIR" kitty
 
-command -v herdr >/dev/null 2>&1 || echo "! herdr is not installed yet"
-command -v herdr >/dev/null 2>&1 && herdr plugin install kaar/nvim-herdr-navigator || true
+install_herdr_plugins

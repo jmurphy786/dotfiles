@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Shared stow helpers, sourced by wsl/setup.sh and omarchy/setup.sh.
+# Setup helpers shared by wsl/setup.sh and omarchy/setup.sh: stowing, the shared
+# bashrc hook, WezTerm, and herdr plugins.
 #
 # Packages that more than one platform uses live at the repo root. To share a
 # new tool: make a root folder for it (<pkg>/.config/<pkg>/...) and add its name
@@ -54,4 +55,25 @@ install_wezterm() {
     else
         stow_packages "$REPO_ROOT" wezterm
     fi
+}
+
+# GitHub herdr plugins every host wants. Add an owner/repo here to install it
+# from both wsl/setup.sh and omarchy/setup.sh.
+HERDR_PLUGINS=(kaar/nvim-herdr-navigator)
+
+# install_herdr_plugins -- install HERDR_PLUGINS and the claude integration
+# (lets herdr resume claude sessions). Skips quietly if herdr is not installed.
+install_herdr_plugins() {
+    if ! command -v herdr >/dev/null 2>&1; then
+        echo "! herdr is not installed yet, skipping plugins"
+        return 0
+    fi
+    # herdr asks to confirm a remote plugin; with no terminal (CI, a container
+    # post-create hook) it needs --yes, and the list above is the trust decision.
+    local p yes=()
+    [ -t 0 ] || yes=(--yes)
+    for p in "${HERDR_PLUGINS[@]}"; do
+        herdr plugin install "${yes[@]}" "$p" || true
+    done
+    herdr integration install claude || true
 }
