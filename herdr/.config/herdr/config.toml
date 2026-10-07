@@ -10,12 +10,24 @@ onboarding = false
 # client does not forward a keys.command it doesn't have itself, so they cannot
 # live here.
 [theme]
-name = "solarized"
+name = "gruvbox"
 auto_switch = false
 
-# herdr.dev hero look: Catppuccin Mocha with a mauve accent instead of blue
+# Miasma (matches the wezterm colour scheme)
 [theme.custom]
-accent = "#cba6f7"
+accent = "#c9a554"
+panel_bg = "#222222"
+sidebar_bg = "#1c1c1c"
+active_row_bg = "#2e2e2e"
+selection_bg = "#383838"
+text = "#c2c2b0"
+subtext0 = "#a0a090"
+overlay0 = "#666666"
+overlay1 = "#7a7a6a"
+surface0 = "#2e2e2e"
+surface1 = "#383838"
+red = "#b36d43"
+green = "#5f875f"
 
 [keys]
 prefix = "ctrl+b"

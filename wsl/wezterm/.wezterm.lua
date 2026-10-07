@@ -43,6 +43,27 @@ config.adjust_window_size_when_changing_font_size = false
 config.window_decorations = "RESIZE"
 config.window_background_opacity = 0.90
 
+config.color_schemes = {
+  ['Miasma'] = {
+    foreground = '#c2c2b0',
+    background = '#222222',
+    cursor_bg = '#d7c483',
+    cursor_fg = '#222222',
+    cursor_border = '#d7c483',
+    selection_fg = '#c2c2b0',
+    selection_bg = '#383838',
+    ansi = {
+      '#222222', '#685742', '#5f875f', '#b36d43',
+      '#78824b', '#bb7744', '#c9a554', '#d7c483',
+    },
+    brights = {
+      '#666666', '#685742', '#5f875f', '#b36d43',
+      '#78824b', '#bb7744', '#c9a554', '#d7c483',
+    },
+  },
+}
+config.color_scheme = 'Miasma'
+
 --config.color_scheme = "Catppuccin Mocha"
 
 --[[ ============================

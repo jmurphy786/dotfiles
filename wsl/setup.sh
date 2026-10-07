@@ -39,13 +39,11 @@ curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/de
 sudo mv devpod /usr/local/bin/devpod
 sudo chmod +x /usr/local/bin/devpod
 
-# herdr client config and the host popup scripts (devpod-add, devpod-manage,
-# herdr-up, herdr-notes). The package is shared with omarchy/, so it lives at
-# the repo root. The containers get their own herdr config from
-# devpod-brew-dotfiles.
-cd "$SCRIPT_DIR/.."
-stow --target="$HOME" herdr
-cd "$SCRIPT_DIR"
+# Packages shared with omarchy/ live at the repo root and are listed in
+# stow-lib.sh (herdr client config + host popup scripts, lazygit, git colours).
+# The containers get their own herdr config from devpod-brew-dotfiles.
+. "$SCRIPT_DIR/../stow-lib.sh"
+stow_shared
 
 # WezTerm runs on Windows, which stow cannot link into: copy its config to the
 # Windows home (re-run this after editing wsl/wezterm/.wezterm.lua).

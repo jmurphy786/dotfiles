@@ -14,11 +14,10 @@ if ! command -v devpod >/dev/null 2>&1; then
     rm -f devpod
 fi
 
-# herdr config + scripts (shared with wsl/), then the kitty config
-cd "$SCRIPT_DIR/.."
-stow --target="$HOME" herdr
-cd "$SCRIPT_DIR"
-stow --target="$HOME" kitty
+# Shared packages (herdr, git, lazygit; listed in stow-lib.sh), then the kitty config
+. "$SCRIPT_DIR/../stow-lib.sh"
+stow_shared
+stow_packages "$SCRIPT_DIR" kitty
 
 command -v herdr >/dev/null 2>&1 || echo "! herdr is not installed yet"
 command -v herdr >/dev/null 2>&1 && herdr plugin install kaar/nvim-herdr-navigator || true
