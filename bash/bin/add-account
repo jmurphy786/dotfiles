@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Set up a GitHub account on this machine: SSH key, ssh config host alias, and a
+# per-directory git identity.
+# Usage: add-account personal personal@email.com ~/personal
+# Usage: add-account work work@company.com ~/work
+ACCOUNT=$1
+EMAIL=$2
+WORKDIR=$3
+
+if [ -z "$ACCOUNT" ] || [ -z "$EMAIL" ] || [ -z "$WORKDIR" ]; then
+    echo "Usage: $0 <account-name> <email> <work-directory>"
+    exit 1
+fi
+
+# Create working directory
+mkdir -p "$WORKDIR"
+chmod 755 "$WORKDIR"
+
+# Generate SSH key
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+echo "Generating SSH key for $EMAIL..."
+ssh-keygen -t ed25519 -C "$EMAIL" -f ~/.ssh/id_"$ACCOUNT"
+
+chmod 600 ~/.ssh/id_"$ACCOUNT"
+chmod 644 ~/.ssh/id_"$ACCOUNT".pub
+
+# Load the key into the agent bash/.bashrc.shared keeps on a fixed socket
+export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
+if ssh-add ~/.ssh/id_"$ACCOUNT"; then
+    :
+else
+    echo "Could not reach the ssh-agent at $SSH_AUTH_SOCK; open a new shell and run:"
+    echo "  ssh-add ~/.ssh/id_$ACCOUNT"
+fi
+
+# Add to ~/.ssh/config (once per account)
+touch ~/.ssh/config
+if ! grep -qx "Host github-$ACCOUNT" ~/.ssh/config; then
+    echo "
+Host github-$ACCOUNT
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_$ACCOUNT" >> ~/.ssh/config
+fi
+chmod 600 ~/.ssh/config
+
+# Create gitconfig for this account
+cat > ~/.gitconfig-"$ACCOUNT" <<EOF
+[user]
+    email = $EMAIL
+EOF
+chmod 600 ~/.gitconfig-"$ACCOUNT"
+
+# Add includeIf to main ~/.gitconfig if not already there
+touch ~/.gitconfig
+if ! grep -qF "gitdir:$WORKDIR/" ~/.gitconfig; then
+    cat >> ~/.gitconfig <<EOF
+[includeIf "gitdir:$WORKDIR/"]
+    path = ~/.gitconfig-$ACCOUNT
+EOF
+fi
+chmod 600 ~/.gitconfig
+
+echo ""
+echo "Done! Add this public key to GitHub ($ACCOUNT):"
+echo ""
+cat ~/.ssh/id_"$ACCOUNT".pub
+echo ""
+echo "Then test with: ssh -T git@github-$ACCOUNT"

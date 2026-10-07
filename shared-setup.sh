@@ -8,7 +8,7 @@
 # with stow_packages.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SHARED_PACKAGES=(herdr git lazygit bash)
+SHARED_PACKAGES=(herdr git lazygit bash nvim)
 
 # stow_packages <dir> <pkg>...  -- (re)stow packages that live in <dir>
 stow_packages() {

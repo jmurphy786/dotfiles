@@ -46,9 +46,7 @@ sudo chmod +x /usr/local/bin/devpod
 . "$SCRIPT_DIR/../shared-setup.sh"
 stow_shared
 
-# Host-only bashrc bits (~/.bashrc.host), then WezTerm (copied to the Windows
-# home; see install_wezterm in shared-setup.sh).
-stow_packages "$SCRIPT_DIR" bash
+# WezTerm (copied to the Windows home; see install_wezterm in shared-setup.sh).
 install_wezterm
 
 # herdr plugins (HERDR_PLUGINS in shared-setup.sh): nvim-aware ctrl+hjkl pane focus

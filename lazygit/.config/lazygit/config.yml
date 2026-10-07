@@ -13,3 +13,15 @@ gui:
     markedBaseCommitBgColor: ['#bb7744']
     unstagedChangesColor: ['#b36d43']
     defaultFgColor: ['#c2c2b0']
+
+customCommands:
+  - key: 'V'
+    context: 'localBranches'
+    description: 'Diffview: branch vs HEAD'
+    command: 'nvim -c "DiffviewOpen {{.SelectedLocalBranch.Name}}...HEAD"'
+    output: terminal
+  - key: 'V'
+    context: 'commits'
+    description: 'Diffview: this commit'
+    command: 'nvim -c "DiffviewOpen {{.SelectedLocalCommit.Hash}}^!"'
+    output: terminal

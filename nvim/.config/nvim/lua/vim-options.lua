@@ -1,0 +1,331 @@
+-- ============================================================
+-- EDITOR OPTIONS
+-- ============================================================
+
+vim.g.mapleader = " "
+
+-- Indentation
+vim.opt.expandtab = true
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
+vim.opt.shiftwidth = 2
+
+-- Line numbers
+vim.opt.number = true
+vim.opt.relativenumber = true
+
+-- General
+vim.opt.autoread = true
+vim.opt.autowriteall = false
+vim.opt.ttimeoutlen = 10
+vim.o.winborder = "rounded" -- hover / signature help / diagnostic floats
+vim.opt.laststatus = 3 -- one statusline for the whole screen, not per-window
+-- Built-in optional plugins (Nvim 0.12): :Undotree, :DiffTool
+pcall(vim.cmd.packadd, "nvim.undotree")
+pcall(vim.cmd.packadd, "nvim.difftool")
+
+-- Persistent undo (browse it with :Undotree)
+vim.opt.undofile = true
+vim.opt.undodir = vim.fn.stdpath("cache") .. "/undo"
+vim.opt.undolevels = 10000
+vim.opt.undoreload = 10000
+
+-- Folding (treesitter-based)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldlevel = 99
+
+-- Clipboard
+vim.g.netrw_browsex_viewer = "explorer.exe"
+if vim.fn.has("wsl") == 1 then
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = { ["+"] = osc52.copy("+"), ["*"] = osc52.copy("*") },
+    paste = { ["+"] = osc52.paste("+"), ["*"] = osc52.paste("*") },
+  }
+end
+-- Not "unnamedplus": that sent every delete (dd, x, c) through OSC 52 and
+-- stalled on the round trip. Only yanks reach the system clipboard; `p` reads
+-- the local register. Use "+dd for a delete you want in Windows.
+vim.api.nvim_create_autocmd("TextYankPost", {
+  callback = function()
+    local ev = vim.v.event
+    if ev.operator == "y" and (ev.regname == "" or ev.regname == '"') then
+      vim.fn.setreg("+", ev.regcontents, ev.regtype)
+    end
+  end,
+})
+
+-- ============================================================
+-- DIAGNOSTICS
+-- ============================================================
+
+vim.diagnostic.config({
+  signs = true,
+  underline = true,
+  virtual_text = true,
+  update_in_insert = false,
+})
+
+-- ============================================================
+-- AUTO COMMANDS
+-- ============================================================
+
+-- Force buffer check when regaining focus
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
+  command = "silent! checktime",
+})
+
+-- Auto-save (replaces auto-save.nvim)
+vim.api.nvim_create_autocmd({ "InsertLeave", "TextChanged", "FocusLost", "BufLeave" }, {
+  callback = function(args)
+    local buf = args.buf
+    if vim.bo[buf].modifiable
+      and vim.bo[buf].buftype == ""
+      and vim.api.nvim_buf_get_name(buf) ~= ""
+      and vim.bo[buf].modified
+    then
+      vim.api.nvim_buf_call(buf, function() vim.cmd("silent! write") end)
+    end
+  end,
+})
+
+vim.keymap.set("n", "<leader>w", "<cmd>wa<cr>", { desc = "Save all buffers" })
+
+-- :source parses a file as Vimscript, so on a shell script it fails with E488.
+-- In sh buffers, :source / :so syntax-checks with bash instead.
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "sh", "bash" },
+  callback = function()
+    for _, lhs in ipairs({ "source", "so" }) do
+      vim.cmd(string.format(
+        [[cnoreabbrev <buffer> <expr> %s (getcmdtype() == ':' && getcmdline() ==# '%s') ? '!bash -n %%' : '%s']],
+        lhs, lhs, lhs))
+    end
+  end,
+})
+
+-- o / O open a plain line: no comment leader or "- " list marker carried over.
+-- <CR> in insert mode still continues them ("r" flag). Scheduled so it runs
+-- after the filetype plugin, which sets formatoptions itself.
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(args)
+    vim.schedule(function()
+      if vim.api.nvim_buf_is_valid(args.buf) then
+        vim.bo[args.buf].formatoptions = vim.bo[args.buf].formatoptions:gsub("o", "")
+      end
+    end)
+  end,
+})
+
+-- Markdown reading: soft-wrap at word boundaries, wrapped list lines indent
+-- under their bullet text, j/k move by screen line (counts still use real lines).
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function(args)
+    vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true
+    vim.opt_local.breakindent = true
+    vim.opt_local.breakindentopt = "list:-1"
+    -- list:-1 indents by the formatlistpat match: "1." / "-" / "*" / "+" bullets and "[ ]" boxes
+    vim.opt_local.formatlistpat = [[^\s*\(\d\+[.)]\|[-*+]\)\s\+\(\[.\]\s\+\)\?]]
+    vim.opt_local.showbreak = "↪ "
+    for _, key in ipairs({ "j", "k" }) do
+      vim.keymap.set({ "n", "x" }, key, function()
+        return vim.v.count == 0 and "g" .. key or key
+      end, { buffer = args.buf, expr = true, desc = "Move by screen line" })
+    end
+  end,
+})
+
+-- Prepopulate new note files
+local templates = {
+  ["*/meetings/*.md"] = { "## Attendees", "", "## Notes", "", "## Action Items", "", "## Tasks", "" },
+  ["*/daily/*.md"] = { "## Notes", "", "## Tasks", "" },
+}
+for pattern, body in pairs(templates) do
+  vim.api.nvim_create_autocmd("BufEnter", {
+    pattern = pattern,
+    callback = function(args)
+      local lines = vim.api.nvim_buf_get_lines(args.buf, 0, -1, false)
+      if #lines == 0 or (#lines == 1 and lines[1] == "") then
+        local header = { "# " .. vim.fn.expand("%:t:r"), "" }
+        vim.list_extend(header, body)
+        vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, header)
+      end
+    end,
+  })
+end
+
+-- ============================================================
+-- USER COMMANDS
+-- ============================================================
+
+-- :Jq [filter] - filter the current JSON buffer through jq (replaces jq.nvim)
+vim.api.nvim_create_user_command("Jq", function(opts)
+  local filter = opts.args ~= "" and opts.args or "."
+  vim.cmd(string.format("%%!jq %s", vim.fn.shellescape(filter)))
+end, { nargs = "?", desc = "Filter buffer through jq" })
+
+-- :Glow - render the current markdown file in glow, in a floating window
+vim.api.nvim_create_user_command("Glow", function()
+  local file = vim.api.nvim_buf_get_name(0)
+  if file == "" then
+    return vim.notify("Glow: buffer has no file", vim.log.levels.WARN)
+  end
+  if vim.bo.modified then
+    vim.cmd("silent write") -- glow reads from disk
+  end
+  local w, h = math.floor(vim.o.columns * 0.85), math.floor(vim.o.lines * 0.85)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    width = w,
+    height = h,
+    style = "minimal",
+    border = "rounded",
+    col = math.floor((vim.o.columns - w) / 2),
+    row = math.floor((vim.o.lines - h) / 2),
+  })
+  vim.fn.jobstart({ "glow", "-p", "-w", tostring(w - 2), file }, { term = true })
+  vim.cmd("startinsert")
+  vim.keymap.set("t", "<Esc>", [[<C-\><C-n>]], { buffer = buf }) -- Esc, then :q
+  vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
+  vim.api.nvim_create_autocmd("TermClose", {
+    buffer = buf,
+    once = true,
+    callback = function()
+      vim.schedule(function()
+        pcall(vim.api.nvim_buf_delete, buf, { force = true })
+      end)
+    end,
+  })
+end, { desc = "Preview markdown in glow" })
+
+vim.cmd([[cnoreabbrev <expr> glow getcmdtype() ==# ':' && getcmdline() ==# 'glow' ? 'Glow' : 'glow']])
+
+-- Note commands (:Zettel, :Inbox, :Tag, :Meeting, :Task) live in lua/notes.lua
+
+-- ============================================================
+-- KEYMAPS
+-- ============================================================
+
+local map = vim.keymap.set
+
+-- Open URL under cursor in the Windows default browser
+map("n", "gx", function()
+  vim.fn.jobstart({ "cmd.exe", "/c", "start", "", vim.fn.expand("<cfile>") }, { detach = true })
+end, { desc = "Open URL in browser" })
+
+-- Undo history (built-in, replaces telescope-undo)
+map("n", "<leader>u", "<cmd>Undotree<cr>", { desc = "Undo tree" })
+
+-- Buffers / windows
+map("n", "<leader>r", "<cmd>bufdo! edit!<cr>", { desc = "Force reload all buffers" })
+map("n", "<leader>k", "<cmd>close<cr>", { desc = "Close current window" })
+map("n", "<leader>ml", "<cmd>vsplit<cr>", { desc = "Vertical split" })
+map("n", "<leader>=", "<C-w>=", { desc = "Equalise window sizes" })
+map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase height" })
+map("n", "<C-Down>", "<cmd>resize -2<cr>", { desc = "Decrease height" })
+map("n", "<C-Right>", "<cmd>vertical resize +2<cr>", { desc = "Increase width" })
+map("n", "<C-Left>", "<cmd>vertical resize -2<cr>", { desc = "Decrease width" })
+
+-- Diff helpers (3-way merge)
+map("n", "<leader>1", "<cmd>diffget LOCAL<cr>", { desc = "Diff: take LOCAL" })
+map("n", "<leader>2", "<cmd>diffget BASE<cr>", { desc = "Diff: take BASE" })
+map("n", "<leader>3", "<cmd>diffget REMOTE<cr>", { desc = "Diff: take REMOTE" })
+
+-- Folds
+map("n", "<leader>ft", "za", { desc = "Fold toggle" })
+map("n", "<leader>fT", "zA", { desc = "Fold toggle parent" })
+map("n", "<leader>fc", "zM", { desc = "Fold close all" })
+map("n", "<leader>fo", "zR", { desc = "Fold open all" })
+
+-- Daily note: :DailyNote / :dn / <leader>dn, see lua/notes.lua
+
+-- Text object: inside code fence (yic / dic / vic)
+map({ "o", "x" }, "ic", function()
+  local start_line = vim.fn.search("^```", "bnW")
+  local end_line = vim.fn.search("^```", "nW")
+  if start_line > 0 and end_line > 0 then
+    vim.cmd("normal! " .. (start_line + 1) .. "GV" .. (end_line - 1) .. "G")
+  end
+end, { silent = true, desc = "Inside code fence" })
+
+-- ============================================================
+-- AI HELPERS
+-- ============================================================
+
+-- Copy file path (optionally with a line range and a note) for pasting into AI chats
+local function copy_ref(opts)
+  local ref = vim.fn.expand("%:.")
+
+  if opts.visual then
+    -- '< and '> are only set after leaving visual mode, so read the live selection
+    local start_line, end_line = vim.fn.line("v"), vim.fn.line(".")
+    if start_line > end_line then
+      start_line, end_line = end_line, start_line
+    end
+    ref = ref .. ":" .. start_line .. ":" .. end_line
+  end
+
+  local note = vim.fn.input("Prompt (optional): ")
+  if note ~= "" then
+    ref = ref .. " " .. note
+  end
+
+  vim.fn.setreg("+", ref)
+  vim.notify("Copied: " .. ref)
+end
+
+map("n", "<leader>cp", function() copy_ref({}) end, { desc = "Copy file path" })
+map("v", "<leader>cp", function() copy_ref({ visual = true }) end, { desc = "Copy file path + range" })
+
+
+-- ============================================================
+-- PROJECT / DIRECTORY NAVIGATION
+-- ============================================================
+
+-- Change the working directory (and the nvim-tree root) together
+local function set_root(dir)
+  vim.cmd.lcd(vim.fn.fnameescape(dir))
+  local ok, api = pcall(require, "nvim-tree.api")
+  if ok then api.tree.change_root(dir) end
+  vim.notify("  " .. vim.fn.fnamemodify(dir, ":~"))
+end
+
+map("n", "<leader>cd", function()
+  local cwd = vim.fn.getcwd()
+  local dirs = {}
+  for name, type in vim.fs.dir(cwd) do
+    if type == "directory" and not name:match("^%.") then
+      table.insert(dirs, cwd .. "/" .. name)
+    end
+  end
+
+  if #dirs == 0 then
+    vim.notify("No subdirectories in: " .. vim.fn.fnamemodify(cwd, ":~"))
+    return
+  end
+
+  vim.ui.select(dirs, {
+    prompt = "Select directory (current: " .. vim.fn.fnamemodify(cwd, ":~") .. ")",
+    format_item = function(item) return vim.fn.fnamemodify(item, ":t") end,
+  }, function(choice)
+    if choice then set_root(choice) end
+  end)
+end, { desc = "Change directory (down)" })
+
+map("n", "<leader>cu", function()
+  set_root(vim.fn.fnamemodify(vim.fn.getcwd(), ":h"))
+end, { desc = "Change directory (up)" })
+
+map("n", "<leader>cw", function()
+  vim.notify("  " .. vim.fn.fnamemodify(vim.fn.getcwd(), ":~"))
+end, { desc = "Show current directory" })
+
+map("n", "<leader>cr", function()
+  local start_dir = vim.fn.getenv("PWD")
+  if start_dir and start_dir ~= vim.NIL then set_root(start_dir) end
+end, { desc = "Reset to initial directory" })
