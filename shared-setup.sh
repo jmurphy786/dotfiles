@@ -8,12 +8,25 @@
 # with stow_packages.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SHARED_PACKAGES=(herdr git lazygit bash nvim)
+SHARED_PACKAGES=(herdr git lazygit bash nvim wezterm)
 
-# stow_packages <dir> <pkg>...  -- (re)stow packages that live in <dir>
+# stow_packages <dir> <pkg>...  -- (re)stow packages that live in <dir>.
+# Any existing file on the system that would conflict is renamed to <file>.bak first.
 stow_packages() {
     local dir=$1
     shift
+    local pkg f rel target
+    for pkg in "$@"; do
+        while IFS= read -r -d '' f; do
+            rel="${f#"$dir/$pkg/"}"
+            target="$HOME/$rel"
+            # nothing there, or already pointing at our file (including via a folded dir): fine
+            [ -e "$target" ] || [ -L "$target" ] || continue
+            [ "$(readlink -f "$target")" = "$(readlink -f "$f")" ] && continue
+            mv --backup=numbered "$target" "$target.bak"
+            echo "! backed up $target -> $target.bak"
+        done < <(find "$dir/$pkg" \( -type f -o -type l \) -print0)
+    done
     (cd "$dir" && stow --restow --target="$HOME" "$@")
 }
 
