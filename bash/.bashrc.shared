@@ -146,6 +146,17 @@ function dpod-rm() {
   fi
 }
 
+noctalia-save() {
+    local cfg="$HOME/.config/noctalia/config.toml"
+    local tmp
+    tmp="$(mktemp)"
+    noctalia config export > "$tmp" || { rm -f "$tmp"; return 1; }
+    cat "$tmp" > "$cfg"   # writes through the symlink into your repo
+    rm -f "$tmp" ~/.local/state/noctalia/settings.toml
+    rm -f "$tmp"
+    echo "saved to $(readlink -f "$cfg")"
+}
+
 eval "$(starship init bash)"
 export TERM=xterm-256color
 

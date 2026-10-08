@@ -1,19 +1,22 @@
 [accessibility]
-ui_scale = 1.20
+ui_scale = 1.2
 
 [bar.default]
 center = [ "workspaces", "spacer_1", "active_window" ]
 concave_edge_corners = true
 end = [ "media", "spacer_1", "tray", "notifications", "network", "volume", "session" ]
+font_family = "DejaVu Sans Condensed"
+icon_color = "on_surface_variant"
 margin_edge = 0
 margin_ends = 0
 radius_bottom_left = 12
 radius_bottom_right = 12
 radius_top_left = 0
 radius_top_right = 0
-scale = 1.10
+scale = 1.1000000000000001
 start = [ "launcher", "clock", "spacer_1", "group:g1" ]
 thickness = 35
+widget_spacing = 15
 
     [[bar.default.capsule_group]]
     border = ""
@@ -22,6 +25,70 @@ thickness = 35
     members = [ "temp", "sysmon_2", "sysmon_3" ]
     opacity = 1.0
     padding = 6.0
+
+[lockscreen_widgets]
+enabled = false
+schema_version = 2
+widget_order = [ "lockscreen-login-box@HDMI-A-2", "lockscreen-login-box@DP-2" ]
+
+    [lockscreen_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@DP-2"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 1280.0
+    cy = 1258.0
+    output = "DP-2"
+    placement_height = 1440.0
+    placement_width = 2560.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@DP-2".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-2"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 960.0
+    cy = 898.0
+    output = "HDMI-A-2"
+    placement_height = 1080.0
+    placement_width = 1920.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-2".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
 
 [shell]
 clipboard_image_action_command = "swash --stdin --name \"swash-$(date +'%Y-%m-%d_%H:%M:%S').png\""
@@ -36,6 +103,10 @@ settings_show_advanced = true
     open_near_click_control_center = true
     session_placement = "floating"
     session_position = "center"
+
+    [shell.screen_corners]
+    enabled = true
+    size = 84
 
     [shell.screenshot]
     copy_to_clipboard = false
@@ -82,19 +153,40 @@ settings_show_advanced = true
 gpu_poll_seconds = 2
 
 [theme]
+builtin = "Dracula"
+community_palette = "Oxocarbon"
 mode = "dark"
-source = "wallpaper"
-wallpaper_scheme = "m3-tonal-spot"
+source = "builtin"
+wallpaper_scheme = "m3-monochrome"
 
     [theme.templates]
-    builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
+    builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "qt", "wezterm" ]
+
+[wallpaper.default]
+path = "/home/jordan/Pictures/Wallpapers/01-nature-of-fear.jpg"
+
+[wallpaper.last]
+path = "/home/jordan/Pictures/Wallpapers/01-nature-of-fear.jpg"
+
+[wallpaper.monitors.DP-2]
+path = "/home/jordan/Pictures/Wallpapers/01-nature-of-fear.jpg"
+
+[wallpaper.monitors.HDMI-A-2]
+path = "/home/jordan/Pictures/Wallpapers/01-nature-of-fear.jpg"
+
+[widget.active_window]
+color = "surface_variant"
+icon_size = 16
+max_length = 284
+min_length = 142
 
 [widget.clock]
-color = "secondary"
+color = "surface_variant"
+font_weight = 700
 format = "{:%H:%M %A %m/%d/%y}"
 
 [widget.launcher]
-color = "secondary"
+color = "surface_variant"
 
 [widget.media]
 hide_when_no_media = true
@@ -102,6 +194,7 @@ title_scroll = "on_hover"
 
 [widget.network]
 color = "secondary"
+show_label = false
 
 [widget.notifications]
 color = "secondary"
@@ -111,9 +204,6 @@ color = "error"
 
 [widget.spacer_1]
 type = "spacer"
-
-[widget.temp]
-show_value = false
 
 [widget.sysmon_2]
 glyph = "gpu-usage"
@@ -126,17 +216,26 @@ glyph = "cpu-2"
 stat = "ram_used"
 type = "sysmon"
 
+[widget.temp]
+show_value = false
+
 [widget.tray]
 capsule = true
 capsule_fill = "on_secondary"
 
 [widget.volume]
 color = "secondary"
+show_label = false
 
 [widget.workspaces]
 active_pill_size = 2.5
-capsule = true
+capsule = false
 capsule_fill = "on_primary"
+focused_output_only = true
+font_weight = 700
+hide_when_empty = true
 inactive_pill_size = 1.0
-pill_scale = 0.80
-show_labels = false
+pill_scale = 0.80000000000000004
+scale = 1.1500000000000001
+show_all_outputs = true
+show_labels = true
