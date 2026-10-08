@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # herdr itself: `brew install herdr` as on WSL, or put the binary in
 # ~/.local/bin; the scripts look in both.
-sudo pacman -S --needed --noconfirm stow fzf jq neovim lazygit wezterm starship ttf-jetbrains-mono-nerd zoxide tuicr yazi ripgrep
+sudo pacman -S --needed --noconfirm stow fzf jq neovim lazygit wezterm starship ttf-jetbrains-mono-nerd zoxide tuicr yazi ripgrep obsidian
 
 curl -fsSL https://herdr.dev/install.sh | sh
 if ! command -v devpod >/dev/null 2>&1; then
