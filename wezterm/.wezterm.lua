@@ -10,7 +10,6 @@ local config = {}
 if wezterm.config_builder then
 	config = wezterm.config_builder()
 end
-
 config.enable_tab_bar = false
 config.enable_kitty_graphics = true
 -- Report Esc as CSI 27 u instead of a bare 0x1b byte, so herdr doesn't have to
@@ -40,7 +39,7 @@ config.font_size = 14
 -- Zooming changes the row/column count instead of resizing the window, so it
 -- can't grow past the laptop screen.
 config.adjust_window_size_when_changing_font_size = false
-config.window_decorations = "RESIZE"
+--config.window_decorations = "RESIZE"
 config.window_background_opacity = 0.9
 
 config.color_schemes = {
