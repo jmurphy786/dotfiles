@@ -19,6 +19,6 @@ fi
 # distro ~/.bashrc, not replacing it), then the kitty config
 . "$SCRIPT_DIR/../shared-setup.sh"
 stow_shared
-#stow_packages "$SCRIPT_DIR" kitty
+stow_packages "$SCRIPT_DIR" hypr 
 
 install_herdr_plugins
