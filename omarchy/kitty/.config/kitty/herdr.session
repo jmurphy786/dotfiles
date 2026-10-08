@@ -1,4 +1,0 @@
-# Start with the "all" tab, as gui-startup does in .wezterm.lua, so ctrl+shift+r
-# (herdr-tab.sh all) finds it instead of making a second.
-new_tab all
-launch bash -lc "herdr; exec bash -l"
