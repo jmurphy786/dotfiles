@@ -74,19 +74,27 @@ install_wezterm() {
 # from both wsl/setup.sh and omarchy/setup.sh.
 HERDR_PLUGINS=(kaar/nvim-herdr-navigator)
 
-# install_herdr_plugins -- install HERDR_PLUGINS and the claude integration
-# (lets herdr resume claude sessions). Skips quietly if herdr is not installed.
+# install_herdr_plugins -- link the local portals-bootstrap plugin, install
+# HERDR_PLUGINS and the claude integration (lets herdr resume claude sessions).
+# Skips quietly if herdr is not installed.
 install_herdr_plugins() {
+    # the herdr installer may drop the binary in ~/.local/bin before it's on PATH
+    if ! command -v herdr >/dev/null 2>&1 && [ -x "$HOME/.local/bin/herdr" ]; then
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
     if ! command -v herdr >/dev/null 2>&1; then
         echo "! herdr is not installed yet, skipping plugins"
         return 0
     fi
-    # herdr asks to confirm a remote plugin; with no terminal (CI, a container
-    # post-create hook) it needs --yes, and the list above is the trust decision.
-    local p yes=()
-    [ -t 0 ] || yes=(--yes)
+    echo "Registering herdr plugins..."
+    # Linked, not installed, so edits in the repo apply live.
+    local local_plugin="$HOME/.config/herdr/local-plugins/portals-bootstrap"
+    [ -d "$local_plugin" ] && { herdr plugin link "$local_plugin" </dev/null || true; }
+    # The list above is the trust decision, so always confirm. </dev/null keeps
+    # herdr (or a server it spawns) from holding the session's stdin open.
+    local p
     for p in "${HERDR_PLUGINS[@]}"; do
-        herdr plugin install "${yes[@]}" "$p" || true
+        herdr plugin install --yes "$p" </dev/null || true
     done
-    herdr integration install claude || true
+    herdr integration install claude </dev/null || true
 }

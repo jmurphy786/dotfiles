@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# ssh shim for herdr + DevPod hosts. Everything else passes straight through.
+#
+# herdr probes machines with `-o StrictHostKeyChecking=yes` on the command line,
+# which beats the `StrictHostKeyChecking no` DevPod writes into ~/.ssh/config.
+# DevPod's `ssh --stdio` server makes a new host key on every connection, so no
+# known_hosts entry can ever match and the machine errors with "Host key
+# verification failed". For *.devpod hosts only, turn that option back to `no`:
+# the same trust DevPod's own config block already gives them, over a local pipe.
+args=("$@")
+devpod=0
+for a in "${args[@]}"; do
+  case "$a" in *.devpod) devpod=1 ;; esac
+done
+if [ "$devpod" = 1 ]; then
+  for i in "${!args[@]}"; do
+    [ "${args[i]}" = "StrictHostKeyChecking=yes" ] && args[i]="StrictHostKeyChecking=no"
+  done
+fi
+exec /usr/bin/ssh "${args[@]}"

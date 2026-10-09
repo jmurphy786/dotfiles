@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # herdr itself: `brew install herdr` as on WSL, or put the binary in
 # ~/.local/bin; the scripts look in both.
-sudo pacman -S --needed --noconfirm stow fzf jq neovim lazygit wezterm starship ttf-jetbrains-mono-nerd zoxide tuicr yazi ripgrep obsidian docker docker-compose
+sudo pacman -S --needed --noconfirm stow fzf jq neovim lazygit wezterm starship ttf-jetbrains-mono-nerd zoxide tuicr yazi ripgrep obsidian docker docker-compose gh
 
 # Enable Docker at boot and start it immediately.
 sudo systemctl enable --now docker.service

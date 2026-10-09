@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Set up the main GitHub identity used everywhere (host and dev containers):
+# SSH key loaded into the shared agent, ssh config for github.com, and the
+# global git name/email.
+# Usage: add-main "Your Name" you@example.com
+set -euo pipefail
+
+NAME=${1:-}
+EMAIL=${2:-}
+
+if [ -z "$NAME" ] || [ -z "$EMAIL" ]; then
+    echo "Usage: $0 \"<name>\" <email>"
+    exit 1
+fi
+
+KEY="$HOME/.ssh/id_main"
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Generate the key (never overwrite an existing one)
+if [ -f "$KEY" ]; then
+    echo "$KEY already exists, keeping it."
+else
+    echo "Generating SSH key for $EMAIL..."
+    ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY"
+fi
+chmod 600 "$KEY"
+chmod 644 "$KEY.pub"
+
+# ssh config: plain github.com uses the main key only
+touch ~/.ssh/config
+if ! grep -qx "Host github.com" ~/.ssh/config; then
+    cat >> ~/.ssh/config <<'EOF'
+
+Host github.com
+  IdentityFile ~/.ssh/id_main
+  IdentitiesOnly yes
+EOF
+fi
+chmod 600 ~/.ssh/config
+
+# Global git identity
+git config --global user.name "$NAME"
+git config --global user.email "$EMAIL"
+chmod 600 ~/.gitconfig
+
+# Load into the shared agent (the one .bashrc keeps on a fixed socket)
+export SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock"
+rc=0
+ssh-add -l >/dev/null 2>&1 || rc=$?
+if [ "$rc" -eq 2 ]; then
+    echo "No agent at $SSH_AUTH_SOCK yet. Open a new shell; .bashrc will start it and load the key."
+else
+    ssh-add "$KEY"
+fi
+
+echo ""
+echo "Done! Add this public key to GitHub:"
+echo ""
+cat "$KEY.pub"
+echo ""
+echo "Then test with: ssh -T git@github.com"
+

@@ -11,6 +11,7 @@ alias ll='ls -lah'
 alias grep='grep --color=auto'
 bind -x '"\C-g": __fzf_file_widget'
 alias nt='cd ~/obsidian-vault && nvim main.md'
+
 # ============================================================================
 # PATH CONFIGURATION
 # ============================================================================
@@ -18,20 +19,20 @@ alias nt='cd ~/obsidian-vault && nvim main.md'
 #PROMPT_COMMAND=""
 # Add Homebrew to PATH
 [ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-export _ZO_DOCTOR=0
+
 export PATH="$HOME/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.local/share/nvim/mason/bin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
-command -v zoxide &>/dev/null && eval "$(zoxide init --cmd cd bash)"
-# Define a fixed path for the socket
-export SSH_AUTH_SOCK="$HOME/.ssh/agent.sock"
 
-# ssh-add -l exits 2 when no agent answers (e.g. a stale socket file is left over)
+command -v zoxide &>/dev/null && eval "$(zoxide init --cmd cd bash)"
+
+export SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock"
+mkdir -p "$HOME/.ssh/agent" && chmod 700 "$HOME/.ssh/agent"
 ssh-add -l >/dev/null 2>&1
 if [ $? -eq 2 ]; then
-  rm -f "$SSH_AUTH_SOCK"
-  ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null 2>&1
+    rm -f "$SSH_AUTH_SOCK"
+    ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null
+    ssh-add ~/.ssh/id_main 2>/dev/null
 fi
 
 # ===========================================================================
@@ -45,8 +46,6 @@ function yazi() {
 
 # This will only work for wezterm and may need to be changed depending on the terminal emulator
 export YAZI_IMAGE_PROTOCOL=sixel
-
-
 
 # =================================================
 # FZF Usage

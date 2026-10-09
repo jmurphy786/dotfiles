@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Set up the personal GitHub identity, used only for repos under one folder on
+# the host. The key is deliberately NOT added to the agent, so it never reaches
+# dev containers. Safe to rerun; also cleans up leftovers from older setups.
+# Usage: add-personal "Your Name" personal@example.com [~/personal]
+set -euo pipefail
+
+NAME=${1:-}
+EMAIL=${2:-}
+WORKDIR=${3:-$HOME/personal}
+
+if [ -z "$NAME" ] || [ -z "$EMAIL" ]; then
+    echo "Usage: $0 \"<name>\" <email> [work-directory]"
+    exit 1
+fi
+
+WORKDIR=$(realpath -m "$WORKDIR")
+KEY="$HOME/.ssh/id_personal"
+PERSONAL_CFG="$HOME/.gitconfig-personal"
+INCLUDE_KEY="includeif.gitdir:$WORKDIR/.path"
+
+mkdir -p "$WORKDIR"
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Generate the key (never overwrite an existing one)
+if [ -f "$KEY" ]; then
+    echo "$KEY already exists, keeping it."
+else
+    echo "Generating SSH key for $EMAIL..."
+    ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY"
+fi
+chmod 600 "$KEY"
+chmod 644 "$KEY.pub"
+
+# ssh config: github-personal alias uses the personal key only
+touch ~/.ssh/config
+if ! grep -qx "Host github-personal" ~/.ssh/config; then
+    cat >> ~/.ssh/config <<'EOF'
+
+Host github-personal
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_personal
+  IdentitiesOnly yes
+EOF
+fi
+chmod 600 ~/.ssh/config
+
+# --- Clean up leftovers from older setups ---------------------------------
+
+# An old core.sshCommand (e.g. with -F /dev/null) bypasses ~/.ssh/config, so
+# the github-personal alias can't resolve. The alias handles the key now.
+if [ -f "$PERSONAL_CFG" ] && git config --file "$PERSONAL_CFG" --get-all core.sshCommand >/dev/null 2>&1; then
+    git config --file "$PERSONAL_CFG" --unset-all core.sshCommand
+    echo "Removed old core.sshCommand from $PERSONAL_CFG"
+fi
+
+# Old includeIf entries for this file under a different gitdir spelling
+# (e.g. gitdir:~/personal/) would include it twice.
+while read -r key value; do
+    [ -z "${key:-}" ] && continue
+    if [ "$key" != "$INCLUDE_KEY" ] && { [ "$value" = "$PERSONAL_CFG" ] || [ "$value" = "~/.gitconfig-personal" ]; }; then
+        git config --global --unset-all "$key"
+        echo "Removed old $key"
+    fi
+done < <(git config --global --get-regexp '^includeif\..*\.path$' 2>/dev/null || true)
+
+# If an old setup loaded the personal key into the shared agent, take it out
+# so it doesn't reach dev containers.
+if SSH_AUTH_SOCK="$HOME/.ssh/agent/agent.sock" ssh-add -d "$KEY.pub" >/dev/null 2>&1; then
+    echo "Removed personal key from the shared agent"
+fi
+
+# --- Per-folder git identity ----------------------------------------------
+
+git config --file "$PERSONAL_CFG" user.name "$NAME"
+git config --file "$PERSONAL_CFG" user.email "$EMAIL"
+git config --file "$PERSONAL_CFG" --replace-all url."git@github-personal:".insteadOf "git@github.com:"
+chmod 600 "$PERSONAL_CFG"
+
+git config --global "$INCLUDE_KEY" "$PERSONAL_CFG"
+chmod 600 ~/.gitconfig
+
+echo ""
+echo "Done! Add this public key to GitHub (personal account):"
+echo ""
+cat "$KEY.pub"
+echo ""
+echo "Then test with: ssh -T git@github-personal"
+echo "Clone personal repos with: git clone git@github-personal:you/repo.git $WORKDIR/repo"
+
